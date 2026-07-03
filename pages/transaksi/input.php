@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 $kategori = mysqli_query($conn, "SELECT * FROM kategori WHERE user_id = $user_id OR user_id IS NULL");
-$akun = mysqli_query($conn, "SELECT * FROM akun_pembayaran");
+$akun = mysqli_query($conn, "SELECT * FROM akun_pembayaran WHERE user_id = $user_id OR user_id IS NULL");
 ?>
 
 <h1>Input Transaksi</h1>

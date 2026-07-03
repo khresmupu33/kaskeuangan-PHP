@@ -289,134 +289,101 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
    Cetak PDF
 </a>
 </div>
+
 <h2>Riwayat Transaksi</h2>
-<div class="table-wrap">
-    <table>
-        <thead>
-            <tr>
-                <th>Tanggal</th>
-                <th>Deskripsi</th>
-                <th>Kategori</th>
-                <th>Akun</th>
-                <th>Tipe</th>
-                <?php foreach ($daftar_akun as $akun): ?>
-                    <th>Saldo <?php echo htmlspecialchars($akun['nama_akun']); ?></th>
-                <?php endforeach; ?>
-                <th>Masuk</th>
-                <th>Keluar</th>
-                <th>Total Saldo</th>
-                <th>Bukti</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            $saldo_saat_ini = $saldo_awal_map;
+<?php
+// 1. Kelompokkan transaksi berdasarkan bulan dan tahun
+$transaksi_per_bulan = [];
+foreach ($semua_transaksi as $tr) {
+    // Membuat kunci bulan-tahun (misal: "February 2026")
+    $bulan_tahun = date('F Y', strtotime($tr['tanggal']));
+    $transaksi_per_bulan[$bulan_tahun][] = $tr;
+}
 
-            foreach ($semua_transaksi as $index => $tr):
-                $id_akun_tr = (int) $tr['akun_id'];
-                $pemasukan = (float) $tr['pemasukan'];
-                $pengeluaran = (float) $tr['pengeluaran'];
+// 2. Inisialisasi saldo awal
+$saldo_saat_ini = $saldo_awal_map;
+?>
 
-                $saldo_saat_ini[$id_akun_tr] = ($saldo_saat_ini[$id_akun_tr] ?? 0) + ($pemasukan - $pengeluaran);
-                $running_total = array_sum($saldo_saat_ini);
+<?php if (count($semua_transaksi) === 0): ?>
+    <div class="info-card"><p>Belum ada transaksi.</p></div>
+<?php else: ?>
+    <?php foreach ($transaksi_per_bulan as $bulan => $transaksi_grup): ?>
+        <h3 style="margin-top: 30px; margin-bottom: 10px; color: #333;"><?php echo $bulan; ?></h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Deskripsi</th>
+                        <th>Kategori</th>
+                        <th>Akun</th>
+                        <th>Tipe</th>
+                        <?php foreach ($daftar_akun as $akun): ?>
+                            <th>Saldo <?php echo htmlspecialchars($akun['nama_akun']); ?></th>
+                        <?php endforeach; ?>
+                        <th>Masuk</th>
+                        <th>Keluar</th>
+                        <th>Total Saldo</th>
+                        <th>Bukti</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($transaksi_grup as $tr): 
+                        $id_akun_tr = (int) $tr['akun_id'];
+                        $pemasukan = (float) $tr['pemasukan'];
+                        $pengeluaran = (float) $tr['pengeluaran'];
 
-                $is_editable = ($index >= $batas_edit);
-            ?>
-                <tr>
-                    <td
-                        class="<?php echo $is_editable ? 'edit-cell' : ''; ?>"
-                        data-field="tanggal"
-                        data-id="<?php echo (int) $tr['id']; ?>"
-                        data-value="<?php echo htmlspecialchars($tr['tanggal'], ENT_QUOTES); ?>"
-                        data-type="date"
-                    >
-                        <?php echo htmlspecialchars($tr['tanggal']); ?>
-                    </td>
-
-                    <td
-                        class="<?php echo $is_editable ? 'edit-cell' : ''; ?>"
-                        data-field="deskripsi"
-                        data-id="<?php echo (int) $tr['id']; ?>"
-                        data-value="<?php echo htmlspecialchars($tr['deskripsi'], ENT_QUOTES); ?>"
-                        data-type="text"
-                    >
-                        <?php echo htmlspecialchars($tr['deskripsi']); ?>
-                    </td>
-
-                    <td
-                        class="<?php echo $is_editable ? 'edit-cell' : ''; ?>"
-                        data-field="kategori_id"
-                        data-id="<?php echo (int) $tr['id']; ?>"
-                        data-value="<?php echo (int) $tr['kategori_id']; ?>"
-                        data-type="select-kategori"
-                    >
-                        <?php echo htmlspecialchars($tr['nama_kategori']); ?>
-                    </td>
-
-                    <td
-                        data-field="akun_id"
-                        data-id="<?php echo (int) $tr['id']; ?>"
-                        data-value="<?php echo (int) $tr['akun_id']; ?>"
-                        data-type="select-akun"
-                    >
-                        <?php echo htmlspecialchars($tr['nama_akun']); ?>
-                    </td>
-
-                    <td><?php echo htmlspecialchars($tr['tipe_transaksi']); ?></td>
-
-                    <?php foreach ($daftar_akun as $akun): ?>
-                        <td>
-                            Rp <?php echo number_format($saldo_saat_ini[$akun['id']] ?? 0, 0, ',', '.'); ?>
-                        </td>
+                        // Update saldo saat ini agar terus berjalan (running total)
+                        $saldo_saat_ini[$id_akun_tr] = ($saldo_saat_ini[$id_akun_tr] ?? 0) + ($pemasukan - $pengeluaran);
+                        $running_total = array_sum($saldo_saat_ini);
+                        
+                        // Menentukan apakah baris ini bisa diedit
+                        // Mencari index asli di array utama untuk logika $batas_edit
+                        $key = array_search($tr, $semua_transaksi);
+                        $is_editable = ($key >= $batas_edit);
+                    ?>
+                        <tr>
+                            <td class="<?php echo $is_editable ? 'edit-cell' : ''; ?>" data-field="tanggal" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo htmlspecialchars($tr['tanggal'], ENT_QUOTES); ?>" data-type="date">
+                                <?php echo htmlspecialchars($tr['tanggal']); ?>
+                            </td>
+                            <td class="<?php echo $is_editable ? 'edit-cell' : ''; ?>" data-field="deskripsi" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo htmlspecialchars($tr['deskripsi'], ENT_QUOTES); ?>" data-type="text">
+                                <?php echo htmlspecialchars($tr['deskripsi']); ?>
+                            </td>
+                            <td class="<?php echo $is_editable ? 'edit-cell' : ''; ?>" data-field="kategori_id" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (int) $tr['kategori_id']; ?>" data-type="select-kategori">
+                                <?php echo htmlspecialchars($tr['nama_kategori']); ?>
+                            </td>
+                            <td data-field="akun_id" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (int) $tr['akun_id']; ?>" data-type="select-akun">
+                                <?php echo htmlspecialchars($tr['nama_akun']); ?>
+                            </td>
+                            <td><?php echo htmlspecialchars($tr['tipe_transaksi']); ?></td>
+                            <?php foreach ($daftar_akun as $akun): ?>
+                                <td>Rp <?php echo number_format($saldo_saat_ini[$akun['id']] ?? 0, 0, ',', '.'); ?></td>
+                            <?php endforeach; ?>
+                            <td class="<?php echo $is_editable ? 'edit-cell' : ''; ?>" data-field="pemasukan" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pemasukan; ?>" data-type="number">
+                                <?php echo number_format($pemasukan, 0, ',', '.'); ?>
+                            </td>
+                            <td class="<?php echo $is_editable ? 'edit-cell' : ''; ?>" data-field="pengeluaran" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pengeluaran; ?>" data-type="number">
+                                <?php echo number_format($pengeluaran, 0, ',', '.'); ?>
+                            </td>
+                            <td><strong>Rp <?php echo number_format($running_total, 0, ',', '.'); ?></strong></td>
+                            <td>
+                                <?php if (!empty($tr['path_bukti'])): ?>
+                                    <a href="../uploads/<?php echo htmlspecialchars($tr['path_bukti']); ?>" target="_blank">Lihat</a>
+                                <?php else: ?> - <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($is_editable): ?>
+                                    <a href="hapus_transaksi.php?id=<?php echo $tr['id']; ?>" onclick="return confirm('Yakin hapus? Saldo akan terkoreksi.')" style="color:red;">Hapus</a>
+                                <?php else: ?> <span class="locked-text">Locked</span> <?php endif; ?>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
-
-                    <td
-                        data-field="pemasukan"
-                        data-id="<?php echo (int) $tr['id']; ?>"
-                        data-value="<?php echo (float) $pemasukan; ?>"
-                        data-type="number"
-                    >
-                        <?php echo number_format($pemasukan, 0, ',', '.'); ?>
-                    </td>
-
-                    <td
-                       data-field="pengeluaran"
-                        data-id="<?php echo (int) $tr['id']; ?>"
-                        data-value="<?php echo (float) $pengeluaran; ?>"
-                        data-type="number"
-                    >
-                        <?php echo number_format($pengeluaran, 0, ',', '.'); ?>
-                    </td>
-
-                    <td><strong>Rp <?php echo number_format($running_total, 0, ',', '.'); ?></strong></td>
-
-                    <td>
-                        <?php if (!empty($tr['path_bukti'])): ?>
-                            <a href="../uploads/<?php echo htmlspecialchars($tr['path_bukti']); ?>" target="_blank">Lihat</a>
-                        <?php else: ?>
-                            -
-                        <?php endif; ?>
-                    </td>
-
-                    <td>
-                        <?php if ($is_editable): ?>
-                            <a href="hapus_transaksi.php?id=<?php echo $tr['id']; ?>" onclick="return confirm('Yakin hapus? Saldo akan terkoreksi.')" style="color:red;">Hapus</a>
-                        <?php else: ?>
-                            <span class="locked-text">Locked</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-
-            <?php if (count($semua_transaksi) === 0): ?>
-                <tr>
-                    <td colspan="<?php echo 10 + count($daftar_akun); ?>" style="text-align:center;">Belum ada transaksi.</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+                </tbody>
+            </table>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
 <script>
 const daftarAkun = <?php echo json_encode($daftar_akun, JSON_UNESCAPED_UNICODE); ?>;
 const daftarKategori = <?php echo json_encode($daftar_kategori, JSON_UNESCAPED_UNICODE); ?>;

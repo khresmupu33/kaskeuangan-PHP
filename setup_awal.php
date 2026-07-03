@@ -7,4 +7,4 @@ if (!isset($_SESSION['user_id'])) header("Location: index.php");
 ?>
 <h1>Setup Akun Pertama</h1>
 <p>Silakan buat akun pembayaran pertama Anda untuk melanjutkan.</p>
-<a href="pages/dashboard.php">Selesai, ke Dashboard</a>
+<a href="pages/transaksi/tambah_akun.php">Selesai, Mari Kita Mulai</a>
