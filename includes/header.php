@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Keuangan Kas</title>
 <style>
 * {
@@ -31,48 +31,91 @@ header {
     background: #2c3e50;
     color: #fff;
     padding: 1rem 0;
+    position: relative;
+}
+
+header nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Logo / Judul Brand di Navbar */
+.nav-brand {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #fff;
+    text-decoration: none;
 }
 
 header nav ul {
     list-style: none;
     display: flex;
-}
-
-header nav ul li {
-    margin-right: 20px;
+    align-items: center;
+    gap: 15px;
 }
 
 header nav ul li a {
     color: #fff;
     text-decoration: none;
     font-weight: bold;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    display: block;
+}
+
+header nav ul li a:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Tombol Hamburger 3 Bar (Default disembunyikan di Desktop) */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 30px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 10;
+}
+
+.hamburger span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background: #fff;
+    border-radius: 3px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animasi Hamburger ke Huruf 'X' saat Aktif */
+.hamburger.active span:nth-child(1) {
+    transform: translateY(9.5px) rotate(45deg);
+}
+
+.hamburger.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+    transform: translateY(-9.5px) rotate(-45deg);
 }
 
 .table-wrap {
     overflow-x: auto;
+    max-width: 100%;
 }
+
 /* Tabel Styling */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin: 20px 0;
-    background: #fff;
-}
-
-table th, table td {
-    padding: 12px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-
-table th {
-    background-color: #3498db;
-    color: white;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
     margin-top: 10px;
+    background: #fff;
 }
 
 table th,
@@ -82,6 +125,11 @@ table td {
     text-align: left;
     vertical-align: top;
     white-space: nowrap;
+}
+
+table th {
+    background-color: #3498db;
+    color: white;
 }
 
 /* Form Styling */
@@ -125,7 +173,7 @@ button:hover {
     border: 1px solid #ddd;
     padding: 15px;
     border-radius: 10px;
-    min-width: 220px;
+    min-width: 200px;
     background: #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
@@ -222,8 +270,6 @@ button:hover {
     font-size: 14px;
 }
 
-
-
 .locked-text {
     color: #bbb;
 }
@@ -239,13 +285,112 @@ button:hover {
 .cell-error {
     background: #ffd6d6 !important;
 }
-    </style>
+
+/* =========================================
+   MEDIA QUERY & HAMBURGER MENU UNTUK HP (<= 768px)
+   ========================================= */
+@media screen and (max-width: 768px) {
+    .container {
+        width: 100%;
+        padding: 10px;
+    }
+
+    .hamburger {
+        display: flex; /* Tampilkan tombol hamburger di HP */
+    }
+
+    header nav {
+        flex-wrap: wrap;
+    }
+
+    /* Menu turun ke bawah & disembunyikan secara default */
+    header nav ul {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background: #34495e;
+        margin-top: 15px;
+        padding: 10px 0;
+        border-radius: 6px;
+        gap: 0;
+    }
+
+    /* Kelas aktif saat diklik via Javascript */
+    header nav ul.show {
+        display: flex;
+    }
+
+    header nav ul li {
+        width: 100%;
+        margin-right: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    header nav ul li:last-child {
+        border-bottom: none;
+    }
+
+    /* Desain tombol agar enak dipencet/luas di layar HP */
+    header nav ul li a {
+        padding: 14px 20px;
+        font-size: 15px;
+        width: 100%;
+        border-radius: 0;
+    }
+
+    header nav ul li a:active {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .dashboard-cards {
+        flex-direction: column;
+    }
+
+    .info-card {
+        min-width: 100%;
+    }
+
+    table th, table td {
+        padding: 8px;
+        font-size: 13px;
+    }
+}
+/* Mengatur kotak card agar bisa scroll Y dengan max-height di Desktop */
+.dashboard-cards.dashboard-scroll {
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+}
+
+/* Media Query untuk HP (Layar <= 768px) */
+@media screen and (max-width: 768px) {
+    .dashboard-cards.dashboard-scroll {
+        max-height: 220px; /* Tinggi maksimal di HP */
+        flex-direction: column; /* Berjajar ke bawah di HP agar mudah di-scroll */
+        flex-wrap: nowrap;
+    }
+    
+    .dashboard-cards.dashboard-scroll .info-card {
+        width: 100%;
+        min-width: 100%;
+    }
+}
+</style>
 </head>
 <body>
     <header>
         <div class="container">
             <nav>
-                <ul>
+                <a href="<?php echo $base_url; ?>pages/dashboard.php" class="nav-brand">Keuangan Kas</a>
+                
+                <button class="hamburger" id="hamburger-btn" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+
+                <ul id="nav-menu">
                     <li><a href="<?php echo $base_url; ?>pages/dashboard.php">Dashboard</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/input.php">Input Transaksi</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Input kategori</a></li>
@@ -257,4 +402,14 @@ button:hover {
             </nav>
         </div>
     </header>
+    
+    <script>
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        const navMenu = document.getElementById('nav-menu');
+
+        hamburgerBtn.addEventListener('click', () => {
+            hamburgerBtn.classList.toggle('active');
+            navMenu.classList.toggle('show');
+        });
+    </script>
     <main class="container" style="padding-top: 20px;">
