@@ -13,7 +13,42 @@ require_once '../config/koneksi.php';
 
 $today_dt = new DateTime();
 $today_dt->setTime(0, 0, 0);
-$today = $today_dt->format('Y-m-d'); // 2026-07-06
+$today = $today_dt->format('Y-m-d'); // Tanggal hari ini
+
+// Proses Pelunasan / Pembayaran Tagihan dari Dashboard
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_lunas_dash'])) {
+    $tagihan_id = (int)$_POST['tagihan_id'];
+    $akun_id = (int)$_POST['akun_id'];
+    $kategori_id = (int)$_POST['kategori_id'];
+    $nominal_bayar = (float)$_POST['nominal_bayar'];
+    $tanggal_trx = $today; // Menggunakan tanggal hari ini
+
+    $q_tagihan = mysqli_query($conn, "SELECT * FROM tagihan WHERE id = $tagihan_id AND user_id = $user_id");
+    $d_tagihan = mysqli_fetch_assoc($q_tagihan);
+
+    if ($d_tagihan) {
+        $sisa_sekarang = (float)$d_tagihan['sisa_nominal'];
+        $bayar_aktual = min($nominal_bayar, $sisa_sekarang);
+        $sisa_baru = $sisa_sekarang - $bayar_aktual;
+        
+        $status_baru = ($sisa_baru <= 0 || $d_tagihan['jenis'] === 'RUTIN') ? 'LUNAS' : 'AKTIF';
+        $nama_tagihan = $d_tagihan['nama_tagihan'];
+        $deskripsi_trx = "Pembayaran/Pelunasan Tagihan: " . $nama_tagihan;
+
+        // Catat uang keluar pada saat dibayar
+        mysqli_query($conn, "INSERT INTO transaksi (user_id, tanggal, kategori_id, akun_id, tipe_transaksi, pemasukan, pengeluaran, deskripsi) 
+                             VALUES ($user_id, '$tanggal_trx', $kategori_id, $akun_id, 'NORMAL', 0, $bayar_aktual, '$deskripsi_trx')");
+        
+        // Update saldo akun berkurang
+        mysqli_query($conn, "UPDATE akun_pembayaran SET saldo_akhir = saldo_akhir - $bayar_aktual WHERE id = $akun_id");
+
+        // Update tagihan
+        mysqli_query($conn, "UPDATE tagihan SET sisa_nominal = $sisa_baru, status = '$status_baru' WHERE id = $tagihan_id");
+    }
+
+    echo "<script>alert('Pembayaran/pelunasan berhasil dicatat!'); window.location='dashboard.php';</script>";
+    exit;
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -28,13 +63,19 @@ while ($akun = mysqli_fetch_assoc($query_akun)) {
 
 /*
 |--------------------------------------------------------------------------
-| Ambil daftar kategori user
+| Ambil daftar kategori user (Kecuali ID 1 untuk pembayaran tagihan)
 |--------------------------------------------------------------------------
 */
 $daftar_kategori = [];
 $query_kategori = mysqli_query($conn, "SELECT id, nama_kategori FROM kategori WHERE user_id = $user_id ORDER BY nama_kategori ASC");
 while ($kategori = mysqli_fetch_assoc($query_kategori)) {
     $daftar_kategori[] = $kategori;
+}
+
+$kategori_tagihan_list = [];
+$query_kat_tagihan = mysqli_query($conn, "SELECT * FROM kategori WHERE (user_id = '$user_id' OR user_id IS NULL) AND id != 1");
+while($k = mysqli_fetch_assoc($query_kat_tagihan)) {
+    $kategori_tagihan_list[] = $k;
 }
 
 /*
@@ -102,7 +143,7 @@ $batas_edit = max(0, $total_data - 7);
 
 /*
 |--------------------------------------------------------------------------
-| Ambil target aktif + progress realisasi (Disamakan dengan target.php)
+| Ambil target aktif + progress realisasi
 |--------------------------------------------------------------------------
 */
 $targets = [];
@@ -120,7 +161,6 @@ while ($target = mysqli_fetch_assoc($query_target)) {
     $nominal_maksimal = (float) $target['nominal_maksimal'];
     $original_tenggat = $target['tenggat_waktu'];
 
-    // Tentukan awal rentang tanggal ($start_date) mundur 1 bulan/tahun dari tenggat asli
     if ($target['periode_target'] == 'BULANAN') {
         $start_date = date('Y-m-d', strtotime($original_tenggat . ' -1 month'));
     } elseif ($target['periode_target'] == 'TAHUNAN') {
@@ -131,7 +171,6 @@ while ($target = mysqli_fetch_assoc($query_target)) {
 
     $end_date = $original_tenggat;
 
-    // Ambil pengeluaran dalam rentang waktu yang presisi
     $sql_realisasi = "
         SELECT COALESCE(SUM(pengeluaran), 0) AS realisasi
         FROM transaksi
@@ -155,7 +194,6 @@ while ($target = mysqli_fetch_assoc($query_target)) {
     $target['is_over'] = $is_over;
     $targets[] = $target;
 
-    // Logika Update / Hapus otomatis tenggat waktu jika sudah lewat hari ini
     $tenggat_db = new DateTime($original_tenggat);
     $tenggat_db->setTime(0, 0, 0);
 
@@ -177,6 +215,17 @@ while ($target = mysqli_fetch_assoc($query_target)) {
             mysqli_query($conn, "UPDATE target SET tenggat_waktu = '$new_date_str' WHERE id = $id_target AND user_id = $user_id");
         }
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Ambil tagihan/hutang/piutang aktif untuk ditampilkan di dashboard
+|--------------------------------------------------------------------------
+*/
+$tagihan_aktif = [];
+$query_tagihan_dash = mysqli_query($conn, "SELECT * FROM tagihan WHERE user_id = '$user_id' AND status = 'AKTIF' AND sisa_nominal > 0 ORDER BY tenggat_waktu ASC");
+while ($row_tag = mysqli_fetch_assoc($query_tagihan_dash)) {
+    $tagihan_aktif[] = $row_tag;
 }
 
 /*
@@ -258,6 +307,27 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
     <?php endif; ?>
 </div>
 
+<h2>Tagihan & Hutang Aktif</h2>
+<div class="target-wrapper">
+    <?php if (count($tagihan_aktif) > 0): ?>
+        <?php foreach ($tagihan_aktif as $tag): ?>
+            <div class="target-card normal" style="border-left: 4px solid #e74c3c;">
+                <h4><?php echo htmlspecialchars($tag['nama_tagihan']); ?></h4>
+                <p class="small-text">Jenis: <strong><?php echo htmlspecialchars($tag['jenis']); ?></strong></p>
+                <p><strong>Total:</strong> Rp <?php echo number_format($tag['total_nominal'], 0, ',', '.'); ?></p>
+                <p><strong>Sisa Tagihan:</strong> Rp <?php echo number_format($tag['sisa_nominal'], 0, ',', '.'); ?></p>
+                <p class="small-text">Jatuh Tempo: <strong><?php echo htmlspecialchars($tag['tenggat_waktu']); ?></strong></p>
+                
+                <button onclick="bukaModalPelunasanDash(<?php echo (int)$tag['id']; ?>, '<?php echo htmlspecialchars($tag['nama_tagihan'], ENT_QUOTES); ?>', <?php echo (float)$tag['sisa_nominal']; ?>)" style="background: #27ae60; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 10px; width: 100%;">Bayar / Lunas</button>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="info-card">
+            <p>Tidak ada tagihan atau hutang aktif saat ini.</p>
+        </div>
+    <?php endif; ?>
+</div>
+
 <div class="filter-box" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
     <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
         <div>
@@ -294,11 +364,11 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
             <label>Sampai:</label><br>
             <input type="date" name="f_tgl_akhir" class="inline-input" value="<?=$_GET['f_tgl_akhir'] ?? ''?>">
         </div>
-        <button type="submit" style="padding: 6px 15px; cursor: pointer;">Filter</button>
+        <button type="submit" style="padding: 6px 15px; cursor: pointer; background: #2c3e50;">Filter</button>
         <a href="?" style="padding: 6px 15px; background: #eee; text-decoration: none; color: #333; border-radius: 4px;">Reset</a>
     </form>
     <a href="transaksi/cetak_laporan.php?<?php echo http_build_query($_GET); ?>"  
-   style="padding: 6px 15px; background: #27ae60; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">
+   style="padding: 6px 15px; background: #2c3e50; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">
     Cetak PDF
 </a>
 </div>
@@ -313,13 +383,21 @@ foreach ($semua_transaksi as $tr) {
 
 $saldo_saat_ini = $saldo_awal_map;
 ?>
-
 <?php if (count($semua_transaksi) === 0): ?>
     <div class="info-card"><p>Belum ada transaksi.</p></div>
 <?php else: ?>
-    <div class="table-scroll-container" style="max-width: 100%; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fff; padding: 10px;">
+    <div class="table-scroll-container" id="scrollContainer" style="max-width: 100%; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fff; padding: 10px; position: relative;">
+        
+        <h3 id="stickyGlobalBulan" style="margin-top: 0; margin-bottom: 10px; color: #fff; position: sticky; top: 0; background: #2c3e50; z-index: 20; padding: 5px 0; padding-left: 20px; border-bottom: 2px solid #f4f6f7; border-radius:10px;">
+            <?php echo array_key_first($transaksi_per_bulan); ?>
+        </h3>
+
         <?php foreach ($transaksi_per_bulan as $bulan => $transaksi_grup): ?>
-            <h3 style="margin-top: 15px; margin-bottom: 10px; color: #333; position: sticky; left: 0;"><?php echo $bulan; ?></h3>
+            
+            <h3 class="month-section-title" data-bulan="<?php echo $bulan; ?>" style="margin-top: 15px; margin-bottom: 10px; color: #333; position: relative; background: #fff; z-index: 5; padding: 5px 0; padding-left: 20px; border-bottom: 2px solid #f4f6f7;">
+                <?php echo $bulan; ?>
+            </h3>
+
             <div class="table-wrap" style="overflow-x: auto; margin-bottom: 20px;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
@@ -396,7 +474,74 @@ $saldo_saat_ini = $saldo_awal_map;
     </div>
 <?php endif; ?>
 
+<div id="modalPelunasanDash" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center;">
+    <div style="background: #fff; padding: 25px; width: 400px; border-radius: 6px; position: relative;">
+        <h3>Konfirmasi Pelunasan Tagihan</h3>
+        <p id="infoNamaTagihanDash" style="font-weight: bold; margin-bottom: 15px;"></p>
+        <form method="POST">
+            <input type="hidden" name="tagihan_id" id="modal_tagihan_id_dash">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Pilih Akun Pembayaran</label>
+                <select name="akun_id" required style="width: 100%; padding: 6px;">
+                    <?php foreach($daftar_akun as $a): ?>
+                        <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format($a['saldo_akhir'], 0, ',', '.') ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Pilih Kategori Pembayaran</label>
+                <select name="kategori_id" required style="width: 100%; padding: 6px;">
+                    <?php foreach($kategori_tagihan_list as $k): ?>
+                        <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kategori']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Nominal Pembayaran</label>
+                <input type="number" step="any" name="nominal_bayar" id="modal_nominal_bayar_dash" required style="width: 100%; padding: 6px;">
+            </div>
+            <button type="submit" name="proses_lunas_dash" style="background: #27ae60; color: #fff; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">Konfirmasi Bayar</button>
+            <button type="button" onclick="tutupModalPelunasanDash()" style="background: #7f8c8d; color: #fff; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">Batal</button>
+        </form>
+    </div>
+</div>
+
 <script>
+function bukaModalPelunasanDash(id, nama, sisa) {
+    document.getElementById('modal_tagihan_id_dash').value = id;
+    document.getElementById('infoNamaTagihanDash').innerText = "Tagihan: " + nama + " (Sisa: Rp " + sisa.toLocaleString('id-ID') + ")";
+    document.getElementById('modal_nominal_bayar_dash').value = sisa;
+    document.getElementById('modalPelunasanDash').style.display = 'flex';
+}
+
+function tutupModalPelunasanDash() {
+    document.getElementById('modalPelunasanDash').style.display = 'none';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('scrollContainer');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+        
+        const titles = container.querySelectorAll('.month-section-title');
+        const globalTitle = document.getElementById('stickyGlobalBulan');
+        
+        container.addEventListener('scroll', () => {
+            let activeBulan = '';
+            titles.forEach(title => {
+                const rect = title.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                if (rect.top <= containerRect.top + 40) {
+                    activeBulan = title.dataset.bulan;
+                }
+            });
+            if (activeBulan) {
+                globalTitle.textContent = activeBulan;
+            }
+        });
+    }
+});
+
 const daftarAkun = <?php echo json_encode($daftar_akun, JSON_UNESCAPED_UNICODE); ?>;
 const daftarKategori = <?php echo json_encode($daftar_kategori, JSON_UNESCAPED_UNICODE); ?>;
 function formatRupiah(angka) {

@@ -43,7 +43,7 @@ $query_akun_list = mysqli_query($conn, "SELECT * FROM akun_pembayaran WHERE user
         <input type="hidden" name="saldo_awal">
     </div>
     
-    <button type="submit">Simpan</button>
+    <button type="submit" style="background: #2c3e50;">Simpan</button>
 </form>
 
 <h2>Daftar Akun Pembayaran</h2>

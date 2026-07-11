@@ -128,7 +128,7 @@ table td {
 }
 
 table th {
-    background-color: #3498db;
+    background-color:#2c3e50;
     color: white;
 }
 
@@ -217,7 +217,8 @@ button:hover {
 
 .target-card.normal {
     border-color: #bfe8d7;
-    background: #eefaf5;
+    background: #2c3e50;
+    color:#fff;
 }
 
 .progress-box {
@@ -240,7 +241,7 @@ button:hover {
 
 .small-text {
     font-size: 0.85em;
-    color: #555;
+    color: #fff;
 }
 
 .warning-text {
@@ -395,7 +396,7 @@ button:hover {
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/input.php">Input Transaksi</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Input kategori</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_akun.php">Input akun</a></li>
-                    <li><a href="<?php echo $base_url; ?>pages/hutang_piutang/list.php">Hutang/Piutang</a></li>
+                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tagihan.php">tagihan</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/target.php">Target</a></li>
                     <li><a href="<?php echo $base_url; ?>index.php">Logout</a></li>
                 </ul>

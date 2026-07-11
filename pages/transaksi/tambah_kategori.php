@@ -36,7 +36,7 @@ $query_kategori_list = mysqli_query($conn, "SELECT * FROM kategori WHERE user_id
         <label>Nama Kategori:</label>
         <input type="text" name="nama_kategori" required>
     </div>
-    <button type="submit">Simpan</button>
+    <button type="submit" style="background: #2c3e50;">Simpan</button>
 </form>
 
 

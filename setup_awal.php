@@ -70,7 +70,7 @@ if ($res_kat) {
     <title>Setup Awal - Aplikasi Keuangan Kas</title>
     <link rel="stylesheet" href="assets/style.css">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; }
         .setup-card { background: #fff; padding: 24px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         h1 { font-size: 1.5rem; color: #2c3e50; margin-bottom: 5px; }
@@ -90,7 +90,7 @@ if ($res_kat) {
 <body>
     <div class="container">
         <h1>Setup Akun Pertama</h1>
-        <p style="color: #666; margin-bottom: 20px;">Selamat datang, <strong><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></strong>! Mari buat akun pembayaran dan kategori pertama Anda.</p>
+        <p style="color: #fff; margin-bottom: 20px;">Selamat datang, <strong><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></strong>! Mari buat akun pembayaran dan kategori pertama Anda.</p>
 
         <?php if(!empty($success_msg)): ?>
             <div class="alert-success"><?= $success_msg ?></div>
@@ -110,7 +110,7 @@ if ($res_kat) {
                     <label>Saldo Awal (Rp)</label>
                     <input type="text" name="saldo_awal" placeholder="0" required value="">
                 </div>
-                <button type="submit" name="tambah_akun">Simpan Akun</button>
+                <button type="submit" name="tambah_akun" style="background: #2c3e50;">Simpan Akun</button>
             </form>
             <div style="margin-top: 15px; font-size: 13px;">
                 <strong>Akun terdaftar (<?= $jml_akun ?>):</strong>
@@ -134,7 +134,7 @@ if ($res_kat) {
                     <label>Nama Kategori</label>
                     <input type="text" name="nama_kategori" placeholder="Misal: Makan / Gaji" required autocomplete="off">
                 </div>
-                <button type="submit" name="tambah_kategori" style="background: #34495e;">Simpan Kategori</button>
+                <button type="submit" name="tambah_kategori" style="background: #2c3e50;">Simpan Kategori</button>
             </form>
             <div style="margin-top: 15px; font-size: 13px;">
                 <strong>Kategori terdaftar (<?= $jml_kat ?>):</strong>

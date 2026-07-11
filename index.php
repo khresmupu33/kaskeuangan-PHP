@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f4f7f6;
+            background-color: #2c3e50;
             margin: 0;
             padding: 15px;
             box-sizing: border-box;

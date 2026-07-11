@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tambah_target'])) {
                 <option value="TAHUNAN">Tahunan</option>
             </select>
         </div>
-        <button type="submit" name="tambah_target">Simpan Target</button>
+        <button type="submit" name="tambah_target" style="background: #2c3e50;">Simpan Target</button>
     </form>
 </div>
 
