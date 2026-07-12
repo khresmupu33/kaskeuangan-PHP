@@ -30,6 +30,6 @@ if(isset($_GET['id']) && isset($_SESSION['user_id'])) {
 }
 
 // Kembali ke dashboard
-header("Location: dashboard.php");
+header("Location: riwayat_lengkap.php");
 exit();
 ?>

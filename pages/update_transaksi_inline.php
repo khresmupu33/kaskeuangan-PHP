@@ -60,28 +60,7 @@ if (!in_array($field, $allowed_fields, true)) {
     exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Validasi hanya 7 transaksi terakhir yang boleh diedit
-|--------------------------------------------------------------------------
-*/
-$semua_id = [];
-$q = mysqli_query($conn, "SELECT id FROM transaksi WHERE user_id = $user_id ORDER BY tanggal ASC, id ASC");
-while ($r = mysqli_fetch_assoc($q)) {
-    $semua_id[] = (int) $r['id'];
-}
 
-$total_data = count($semua_id);
-$batas_edit = max(0, $total_data - 7);
-$id_boleh_edit = array_slice($semua_id, $batas_edit);
-
-if (!in_array($id, $id_boleh_edit, true)) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Transaksi ini sudah dikunci dan tidak bisa diedit.'
-    ]);
-    exit;
-}
 
 /*
 |--------------------------------------------------------------------------

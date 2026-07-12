@@ -70,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-top: 10px;
         }
         .login-card button:hover {
-            background: #219150;
+            background: #2c3e50;
         }
         .form-group {
             margin-bottom: 15px;
@@ -85,7 +85,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="form-group">
                 <input type="text" name="username" placeholder="Username" required autocomplete="off">
             </div>
-            <button type="submit">Masuk</button>
+            <button type="submit" style="background-color:#2c3e50;">Masuk</button>
         </form>
         <p style="margin-top: 15px; text-align: center; font-size: 14px; color: #555;">
             Belum punya akun? <a href="register.php" style="color: #3498db; text-decoration: none; font-weight: bold;">Daftar</a>

@@ -6,6 +6,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = (int) $_SESSION['user_id'];
+$username = $_SESSION['username'] ?? 'guest';
 $base_url = "../";
 
 include '../includes/header.php';
@@ -15,13 +16,40 @@ $today_dt = new DateTime();
 $today_dt->setTime(0, 0, 0);
 $today = $today_dt->format('Y-m-d'); // Tanggal hari ini
 
-// Proses Pelunasan / Pembayaran Tagihan dari Dashboard
+// Direktori upload bukti di dashboard menggunakan assets/img/
+$folder_user = '../assets/img/' . $username;
+if (!is_dir($folder_user)) {
+    @mkdir($folder_user, 0777, true);
+}
+
+// Proses Pelunasan / Pembayaran Tagihan dari Dashboard (Dengan Bukti - Format ZIP disamakan)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_lunas_dash'])) {
     $tagihan_id = (int)$_POST['tagihan_id'];
     $akun_id = (int)$_POST['akun_id'];
     $kategori_id = (int)$_POST['kategori_id'];
     $nominal_bayar = (float)$_POST['nominal_bayar'];
     $tanggal_trx = $today; // Menggunakan tanggal hari ini
+
+    // Handle Upload Bukti ZIP Pelunasan di Dashboard sesuai format yang diminta
+    $path_bukti = null;
+    if (isset($_FILES['bukti_bayar_lunas_dash']) && $_FILES['bukti_bayar_lunas_dash']['error'] == 0) {
+        $target_folder_user = '../assets/img/' . $username;
+
+        if (!is_dir($target_folder_user)) {
+            mkdir($target_folder_user, 0777, true);
+        }
+
+        $zip = new ZipArchive();
+        $zip_name = 'bukti_lunas_dash_' . time() . '.zip';
+        $zip_path = $target_folder_user . '/' . $zip_name; 
+
+        if ($zip->open($zip_path, ZipArchive::CREATE) === TRUE) {
+            $zip->addFile($_FILES['bukti_bayar_lunas_dash']['tmp_name'], $_FILES['bukti_bayar_lunas_dash']['name']);
+            $zip->close();
+            $path_bukti = $username . '/' . $zip_name;
+        }
+    }
+    $path_bukti_sql = $path_bukti ? "'$path_bukti'" : "NULL";
 
     $q_tagihan = mysqli_query($conn, "SELECT * FROM tagihan WHERE id = $tagihan_id AND user_id = $user_id");
     $d_tagihan = mysqli_fetch_assoc($q_tagihan);
@@ -35,9 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_lunas_dash'])) 
         $nama_tagihan = $d_tagihan['nama_tagihan'];
         $deskripsi_trx = "Pembayaran/Pelunasan Tagihan: " . $nama_tagihan;
 
-        // Catat uang keluar pada saat dibayar
-        mysqli_query($conn, "INSERT INTO transaksi (user_id, tanggal, kategori_id, akun_id, tipe_transaksi, pemasukan, pengeluaran, deskripsi) 
-                             VALUES ($user_id, '$tanggal_trx', $kategori_id, $akun_id, 'NORMAL', 0, $bayar_aktual, '$deskripsi_trx')");
+        // Catat uang keluar pada saat dibayar + path_bukti
+        mysqli_query($conn, "INSERT INTO transaksi (user_id, tanggal, kategori_id, akun_id, tipe_transaksi, pemasukan, pengeluaran, path_bukti, deskripsi) 
+                             VALUES ($user_id, '$tanggal_trx', $kategori_id, $akun_id, 'NORMAL', 0, $bayar_aktual, $path_bukti_sql, '$deskripsi_trx')");
         
         // Update saldo akun berkurang
         mysqli_query($conn, "UPDATE akun_pembayaran SET saldo_akhir = saldo_akhir - $bayar_aktual WHERE id = $akun_id");
@@ -49,7 +77,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_lunas_dash'])) 
     echo "<script>alert('Pembayaran/pelunasan berhasil dicatat!'); window.location='dashboard.php';</script>";
     exit;
 }
+// Proses Aksi Tambah / Kurang Nominal Alokasi dari Dashboard
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tambah_nominal_dash'])) {
+    $alokasi_id = (int)$_POST['alokasi_id'];
+    $nominal_tambah = (float)$_POST['nominal_tambah'];
 
+    $q_alok = mysqli_query($conn, "SELECT p.*, a.saldo_akhir FROM penyisihan_dana p JOIN akun_pembayaran a ON p.akun_id = a.id WHERE p.id = $alokasi_id AND p.user_id = $user_id");
+    $d_alok = mysqli_fetch_assoc($q_alok);
+
+    if ($d_alok) {
+        $new_terkumpul = $d_alok['terkumpul_nominal'] + $nominal_tambah;
+        $target = $d_alok['target_nominal'];
+        $saldo_aktif = (float)$d_alok['saldo_akhir'];
+
+        if ($new_terkumpul > $saldo_aktif || $target >= (0.70 * $saldo_aktif)) {
+            echo "<script>alert('Gagal! Penambahan ini melebihi batas aman saldo akun.'); window.location='dashboard.php';</script>";
+            exit;
+        }
+
+        $new_status = ($new_terkumpul >= $target) ? 'TERCAPAI' : 'AKTIF';
+        mysqli_query($conn, "UPDATE penyisihan_dana SET terkumpul_nominal = $new_terkumpul, status = '$new_status' WHERE id = $alokasi_id AND user_id = $user_id");
+        echo "<script>alert('Berhasil menambah nominal alokasi!'); window.location='dashboard.php';</script>";
+        exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['kurang_nominal_dash'])) {
+    $alokasi_id = (int)$_POST['alokasi_id'];
+    $nominal_kurang = (float)$_POST['nominal_kurang'];
+
+    $q_alok = mysqli_query($conn, "SELECT * FROM penyisihan_dana WHERE id = $alokasi_id AND user_id = $user_id");
+    $d_alok = mysqli_fetch_assoc($q_alok);
+
+    if ($d_alok) {
+        $new_terkumpul = max(0, $d_alok['terkumpul_nominal'] - $nominal_kurang);
+        $target = $d_alok['target_nominal'];
+        $new_status = ($new_terkumpul >= $target) ? 'TERCAPAI' : 'AKTIF';
+
+        mysqli_query($conn, "UPDATE penyisihan_dana SET terkumpul_nominal = $new_terkumpul, status = '$new_status' WHERE id = $alokasi_id AND user_id = $user_id");
+        echo "<script>alert('Berhasil mengurangi nominal alokasi!'); window.location='dashboard.php';</script>";
+        exit;
+    }
+}
 /*
 |--------------------------------------------------------------------------
 | Ambil daftar akun user
@@ -141,6 +210,16 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
 $total_data = count($semua_transaksi);
 $batas_edit = max(0, $total_data - 7);
 
+/*
+|--------------------------------------------------------------------------
+| Ambil daftar alokasi dana / celengan virtual aktif
+|--------------------------------------------------------------------------
+*/
+$alokasi_aktif = [];
+$query_alokasi = mysqli_query($conn, "SELECT p.*, a.nama_akun, a.saldo_akhir FROM penyisihan_dana p JOIN akun_pembayaran a ON p.akun_id = a.id WHERE p.user_id = '$user_id' ORDER BY p.id ASC");
+while ($row_alok = mysqli_fetch_assoc($query_alokasi)) {
+    $alokasi_aktif[] = $row_alok;
+}
 /*
 |--------------------------------------------------------------------------
 | Ambil target aktif + progress realisasi
@@ -318,7 +397,24 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
                 <p><strong>Sisa Tagihan:</strong> Rp <?php echo number_format($tag['sisa_nominal'], 0, ',', '.'); ?></p>
                 <p class="small-text">Jatuh Tempo: <strong><?php echo htmlspecialchars($tag['tenggat_waktu']); ?></strong></p>
                 
-                <button onclick="bukaModalPelunasanDash(<?php echo (int)$tag['id']; ?>, '<?php echo htmlspecialchars($tag['nama_tagihan'], ENT_QUOTES); ?>', <?php echo (float)$tag['sisa_nominal']; ?>)" style="background: #27ae60; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 10px; width: 100%;">Bayar / Lunas</button>
+                <?php if (!empty($tag['tempat_bayar'])): ?>
+                    <p class="small-text" style="margin-top: 8px;">
+                        Tempat Bayar: 
+                        <?php 
+                            $tempat = $tag['tempat_bayar'];
+                            // Cek apakah nilai tempat_bayar berupa URL/Link (http/https/www)
+                            if (filter_var($tempat, FILTER_VALIDATE_URL) || preg_match('/^(http:\/\/|https:\/\/|www\.)/i', $tempat)) {
+                                $url_link = preg_match('/^www\./i', $tempat) ? 'https://' . $tempat : $tempat;
+                                echo '<a href="' . htmlspecialchars($url_link, ENT_QUOTES) . '" target="_blank" style="color: #3498db; text-decoration: underline; font-weight: bold;">' . htmlspecialchars($tag['tempat_bayar']) . '</a>';
+                            } else {
+                                // Jika bukan link, tampilkan sebagai teks biasa
+                                echo '<strong>' . htmlspecialchars($tempat) . '</strong>';
+                            }
+                        ?>
+                    </p>
+                <?php endif; ?>
+
+                <button onclick="bukaModalPelunasanDash(<?php echo (int)$tag['id']; ?>, '<?php echo htmlspecialchars($tag['nama_tagihan'], ENT_QUOTES); ?>', <?php echo (float)$tag['sisa_nominal']; ?>)" style="background: #2c3e50; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 10px; width: 100%;">Bayar / Lunas</button>
             </div>
         <?php endforeach; ?>
     <?php else: ?>
@@ -327,51 +423,101 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
         </div>
     <?php endif; ?>
 </div>
+<h2>Alokasi Dana / Celengan Virtual</h2>
+<div class="target-wrapper">
+    <?php if (count($alokasi_aktif) > 0): ?>
+        <?php foreach ($alokasi_aktif as $alok): 
+            $target_alok = (float)$alok['target_nominal'];
+            $terkumpul_alok = (float)$alok['terkumpul_nominal'];
+            $sisa_alok = $target_alok - $terkumpul_alok;
+            $persen_alok = $target_alok > 0 ? min(($terkumpul_alok / $target_alok) * 100, 100) : 0;
+        ?>
+            <div class="target-card normal" style="border-left: 4px solid #3498db;">
+                <h4><?php echo htmlspecialchars($alok['nama_penyisihan']); ?></h4>
+                <p class="small-text">Akun: <strong><?php echo htmlspecialchars($alok['nama_akun']); ?></strong></p>
+                <p><strong>Target:</strong> Rp <?php echo number_format($target_alok, 0, ',', '.'); ?></p>
+                <p><strong>Terkumpul:</strong> Rp <?php echo number_format($terkumpul_alok, 0, ',', '.'); ?></p>
+                <p><strong>Kurang:</strong> Rp <?php echo number_format(max(0, $sisa_alok), 0, ',', '.'); ?></p>
+                
+                <div class="progress-box">
+                    <div class="progress-bar" style="width: <?php echo $persen_alok; ?>%; background: #3498db;"></div>
+                </div>
+                <p class="small-text"><?php echo number_format($persen_alok, 1, ',', '.'); ?>% terkumpul</p>
+                <p class="small-text">Status: <strong><?php echo htmlspecialchars($alok['status']); ?></strong></p>
 
-<div class="filter-box" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
-    <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
-        <div>
-            <label>Akun:</label><br>
-            <select name="f_akun" class="inline-select">
-                <option value="">Semua</option>
-                <?php foreach ($daftar_akun as $a): ?>
-                    <option value="<?=$a['id']?>" <?=($_GET['f_akun'] ?? '') == $a['id'] ? 'selected' : ''?>><?=$a['nama_akun']?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div>
-            <label>Kategori:</label><br>
-            <select name="f_kategori" class="inline-select">
-                <option value="">Semua</option>
-                <?php foreach ($daftar_kategori as $k): ?>
-                    <option value="<?=$k['id']?>" <?=($_GET['f_kategori'] ?? '') == $k['id'] ? 'selected' : ''?>><?=$k['nama_kategori']?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div>
-            <label>Tipe:</label><br>
-            <select name="f_tipe" class="inline-select">
-                <option value="">Semua</option>
-                <option value="MASUK" <?=($_GET['f_tipe'] ?? '') == 'MASUK' ? 'selected' : ''?>>Masuk</option>
-                <option value="KELUAR" <?=($_GET['f_tipe'] ?? '') == 'KELUAR' ? 'selected' : ''?>>Keluar</option>
-            </select>
-        </div>
-        <div>
-            <label>Dari:</label><br>
-            <input type="date" name="f_tgl_awal" class="inline-input" value="<?=$_GET['f_tgl_awal'] ?? ''?>">
-        </div>
-        <div>
-            <label>Sampai:</label><br>
-            <input type="date" name="f_tgl_akhir" class="inline-input" value="<?=$_GET['f_tgl_akhir'] ?? ''?>">
-        </div>
-        <button type="submit" style="padding: 6px 15px; cursor: pointer; background: #2c3e50;">Filter</button>
-        <a href="?" style="padding: 6px 15px; background: #eee; text-decoration: none; color: #333; border-radius: 4px;">Reset</a>
-    </form>
-    <a href="transaksi/cetak_laporan.php?<?php echo http_build_query($_GET); ?>"  
-   style="padding: 6px 15px; background: #2c3e50; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">
-    Cetak PDF
-</a>
+                <?php if ($alok['status'] !== 'TERCAPAI'): ?>
+                    <div style="display: flex; gap: 5px; margin-top: 10px;">
+                        <button onclick="bukaModalTambahAlokasi(<?php echo (int)$alok['id']; ?>, '<?php echo htmlspecialchars($alok['nama_penyisihan'], ENT_QUOTES); ?>')" style="background: #2d5378; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; flex: 1;">+ Nominal</button>
+                        <button onclick="bukaModalKurangAlokasi(<?php echo (int)$alok['id']; ?>, '<?php echo htmlspecialchars($alok['nama_penyisihan'], ENT_QUOTES); ?>')" style="background: #7f8c8d; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; flex: 1;">- Nominal</button>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="info-card"><p>Tidak ada alokasi dana aktif.</p></div>
+    <?php endif; ?>
 </div>
+
+<div id="modalTambahAlokasi" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:20px; width:350px; border-radius:6px; position:relative;">
+        <h3 id="modalTitleTambahAlok">Tambah Nominal</h3>
+        <form method="POST">
+            <input type="hidden" name="alokasi_id" id="modal_alokasi_id_tambah">
+            <div style="margin-bottom: 15px;">
+                <label>Nominal Tambahan (Rp)</label>
+                <input type="text" class="format-uang" data-hidden="nominal_tambah" required placeholder="0" style="width:100%; padding:6px;">
+                <input type="hidden" name="nominal_tambah" id="nominal_tambah">
+            </div>
+            <button type="submit" name="tambah_nominal_dash" style="background: #27ae60; color:#fff; padding: 6px 12px; border:none; border-radius:4px; cursor:pointer;">Simpan</button>
+            <button type="button" onclick="tutupModalTambahAlokasi()" style="background: #7f8c8d; color:#fff; padding: 6px 12px; border:none; border-radius:4px; margin-left: 5px; cursor:pointer;">Batal</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalKurangAlokasi" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:20px; width:350px; border-radius:6px; position:relative;">
+        <h3 id="modalTitleKurangAlok">Kurangi Nominal</h3>
+        <form method="POST">
+            <input type="hidden" name="alokasi_id" id="modal_alokasi_id_kurang">
+            <div style="margin-bottom: 15px;">
+                <label>Nominal Pengurangan (Rp)</label>
+                <input type="text" class="format-uang" data-hidden="nominal_kurang" required placeholder="0" style="width:100%; padding:6px;">
+                <input type="hidden" name="nominal_kurang" id="nominal_kurang">
+            </div>
+            <button type="submit" name="kurang_nominal_dash" style="background: #e67e22; color:#fff; padding: 6px 12px; border:none; border-radius:4px; cursor:pointer;">Kurangi</button>
+            <button type="button" onclick="tutupModalKurangAlokasi()" style="background: #7f8c8d; color:#fff; padding: 6px 12px; border:none; border-radius:4px; margin-left: 5px; cursor:pointer;">Batal</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function bukaModalTambahAlokasi(id, nama) {
+    document.getElementById('modal_alokasi_id_tambah').value = id;
+    document.getElementById('modalTitleTambahAlok').innerText = 'Tambah Nominal: ' + nama;
+    document.getElementById('modalTambahAlokasi').style.display = 'flex';
+}
+function tutupModalTambahAlokasi() {
+    document.getElementById('modalTambahAlokasi').style.display = 'none';
+}
+
+function bukaModalKurangAlokasi(id, nama) {
+    document.getElementById('modal_alokasi_id_kurang').value = id;
+    document.getElementById('modalTitleKurangAlok').innerText = 'Kurangi Nominal: ' + nama;
+    document.getElementById('modalKurangAlokasi').style.display = 'flex';
+}
+function tutupModalKurangAlokasi() {
+    document.getElementById('modalKurangAlokasi').style.display = 'none';
+}
+
+document.querySelectorAll('input.format-uang').forEach(input => {
+    input.addEventListener('input', function(e) {
+        let value = this.value.replace(/[^0-9]/g, "");
+        let hiddenInput = document.querySelector('input[name="' + this.getAttribute('data-hidden') + '"]');
+        if (hiddenInput) hiddenInput.value = value;
+        this.value = value ? value.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "";
+    });
+});
+</script>
 
 <h2>Riwayat Transaksi</h2>
 <?php
@@ -408,14 +554,10 @@ $saldo_saat_ini = $saldo_awal_map;
                             <th>Kategori</th>
                             <th>Akun</th>
                             <th>Tipe</th>
-                            <?php foreach ($daftar_akun as $akun): ?>
-                                <th>Saldo <?php echo htmlspecialchars($akun['nama_akun']); ?></th>
-                            <?php endforeach; ?>
                             <th>Masuk</th>
                             <th>Keluar</th>
                             <th>Total Saldo</th>
                             <th>Bukti</th>
-                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -445,9 +587,6 @@ $saldo_saat_ini = $saldo_awal_map;
                                     <?php echo htmlspecialchars($tr['nama_akun']); ?>
                                 </td>
                                 <td><?php echo htmlspecialchars($tr['tipe_transaksi']); ?></td>
-                                <?php foreach ($daftar_akun as $akun): ?>
-                                    <td>Rp <?php echo number_format($saldo_saat_ini[$akun['id']] ?? 0, 0, ',', '.'); ?></td>
-                                <?php endforeach; ?>
                                 <td data-field="pemasukan" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pemasukan; ?>" data-type="number">
                                     <?php echo number_format($pemasukan, 0, ',', '.'); ?>
                                 </td>
@@ -457,13 +596,77 @@ $saldo_saat_ini = $saldo_awal_map;
                                 <td><strong>Rp <?php echo number_format($running_total, 0, ',', '.'); ?></strong></td>
                                 <td>
                                     <?php if (!empty($tr['path_bukti'])): ?>
-                                        <a href="../uploads/<?php echo htmlspecialchars($tr['path_bukti']); ?>" target="_blank">Lihat</a>
-                                    <?php else: ?> - <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($is_editable): ?>
-                                        <a href="hapus_transaksi.php?id=<?php echo $tr['id']; ?>" onclick="return confirm('Yakin hapus? Saldo akan terkoreksi.')" style="color:red;">Hapus</a>
-                                    <?php else: ?> <span class="locked-text">Locked</span> <?php endif; ?>
+                                        <?php  
+                                            $ext = strtolower(pathinfo($tr['path_bukti'], PATHINFO_EXTENSION));
+                                            $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif']);
+                                            $is_zip = ($ext === 'zip');
+
+                                            // Membaca path file bukti dari assets/img/
+                                            $file_path = '../assets/img/' . $tr['path_bukti'];
+                                        ?>
+
+                                        <?php if ($is_image): ?>
+                                            <a href="javascript:void(0);" onclick="bukaModal(this)">Lihat</a>
+                                            <div class="overlay-bukti" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">
+                                                <div style="position: relative; max-width: 95%; max-height: 95%; text-align: center;">
+                                                    <span onclick="tutupModal(this)" style="position: absolute; top: -45px; right: 0; font-size: 35px; color: white; cursor: pointer; font-weight: bold; background: rgba(0,0,0,0.6); width: 42px; height: 42px; text-align: center; line-height: 40px; border-radius: 50%; transition: background 0.2s;">&times;</span>
+                                                    <img src="<?php echo htmlspecialchars($file_path); ?>" alt="Bukti" style="max-width: 100%; max-height: 85vh; width: auto; height: auto; display: inline-block; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                                                </div>
+                                            </div>
+
+                                        <?php elseif ($is_zip): ?>
+                                            <a href="javascript:void(0);" onclick="bukaModalZip(this, '<?php echo htmlspecialchars($tr['path_bukti'], ENT_QUOTES); ?>')">Lihat Isi ZIP</a>
+                                            <div class="overlay-bukti" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+                                                <div style="position: relative; width: 600px; max-width: 95%; background: white; padding: 25px; border-radius: 8px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                                                    <span onclick="tutupModal(this)" style="position: absolute; top: 12px; right: 18px; font-size: 28px; color: black; cursor: pointer; font-weight: bold;">&times;</span>
+                                                    <h4 style="margin-top: 0; margin-bottom: 15px;">Daftar File & Pratinjau dalam ZIP:</h4>
+                                                    <div class="zip-content-container">Memuat isi...</div>
+                                                </div>
+                                            </div>
+
+                                        <?php else: ?>
+                                            <a href="<?php echo htmlspecialchars($file_path); ?>" target="_blank">Lihat File</a>
+                                        <?php endif; ?>
+
+                                    <?php else: ?> 
+                                        - 
+                                    <?php endif; ?>
+
+                                    <script>
+                                    function bukaModal(el) {
+                                        var overlay = el.nextElementSibling;
+                                        if (overlay) {
+                                            overlay.style.display = "flex";
+                                        }
+                                    }
+
+                                    // Fungsi khusus AJAX untuk file ZIP agar tidak memberatkan loading utama
+                                    function bukaModalZip(el, pathBukti) {
+                                        var overlay = el.nextElementSibling;
+                                        if (overlay) {
+                                            overlay.style.display = "flex";
+                                            var container = overlay.querySelector('.zip-content-container');
+                                            container.innerHTML = "Memuat isi...";
+
+                                            // Panggil file eksternal via fetch API
+                                            fetch('get_zip_content.php?file=' + encodeURIComponent(pathBukti))
+                                                .then(response => response.text())
+                                                .then(html => {
+                                                    container.innerHTML = html;
+                                                })
+                                                .catch(error => {
+                                                    container.innerHTML = "Gagal memuat isi ZIP.";
+                                                });
+                                        }
+                                    }
+
+                                    function tutupModal(el) {
+                                        var overlay = el.closest('.overlay-bukti');
+                                        if (overlay) {
+                                            overlay.style.display = "none";
+                                        }
+                                    }
+                                    </script>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -473,12 +676,20 @@ $saldo_saat_ini = $saldo_awal_map;
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+<div class="overview-riwayat-box" style="display: flex; justify-content: space-between; align-items: center; background: #fdfefe; padding: 15px 20px; border: 1px solid #e5e8e8; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+    <div>
+        <h3 style="margin: 0; color: #2c3e50; font-size: 16px;">Lihat untuk lebih lengkap untuk melihat dan mengedit Riwayat keseluruhan</h3>
+    </div>
+    <a href="riwayat_lengkap.php" style="background: #2c3e50; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;">
+        Lihat Selengkapnya &rarr;
+    </a>
+</div>
 
 <div id="modalPelunasanDash" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center;">
     <div style="background: #fff; padding: 25px; width: 400px; border-radius: 6px; position: relative;">
         <h3>Konfirmasi Pelunasan Tagihan</h3>
         <p id="infoNamaTagihanDash" style="font-weight: bold; margin-bottom: 15px;"></p>
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="tagihan_id" id="modal_tagihan_id_dash">
             <div class="form-group" style="margin-bottom: 12px;">
                 <label>Pilih Akun Pembayaran</label>
@@ -496,9 +707,13 @@ $saldo_saat_ini = $saldo_awal_map;
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="form-group" style="margin-bottom: 15px;">
+            <div class="form-group" style="margin-bottom: 12px;">
                 <label>Nominal Pembayaran</label>
                 <input type="number" step="any" name="nominal_bayar" id="modal_nominal_bayar_dash" required style="width: 100%; padding: 6px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Bukti Pembayaran (Gambar - di-zip otomatis):</label>
+                <input type="file" name="bukti_bayar_lunas_dash" accept="image/*" style="width: 100%;">
             </div>
             <button type="submit" name="proses_lunas_dash" style="background: #27ae60; color: #fff; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">Konfirmasi Bayar</button>
             <button type="button" onclick="tutupModalPelunasanDash()" style="background: #7f8c8d; color: #fff; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">Batal</button>
@@ -679,7 +894,6 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
-
 <div id="calculator-box" style="display: none; position: fixed; bottom: 20px; right: 20px; background: #2c3e50; color: white; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; font-weight: bold; transition: all 0.3s ease;">
     Terpilih: Masuk: <span id="total-masuk">0</span> | Keluar: <span id="total-keluar">0</span>
 </div>
@@ -721,6 +935,22 @@ document.addEventListener('click', function(e) {
             hitungTotal();
         });
     }
+</script>
+
+<script>
+function bukaModalGambar(el) {
+    var overlay = el.nextElementSibling;
+    if (overlay) {
+        overlay.style.display = "flex"; // Menggunakan flex agar gambar persis di tengah
+    }
+}
+
+function tutupModalGambar(el) {
+    var overlay = el.closest('.overlay-bukti');
+    if (overlay) {
+        overlay.style.display = "none";
+    }
+}
 </script>
 
 <?php include '../includes/footer.php'; ?>

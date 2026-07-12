@@ -54,7 +54,7 @@ $res_transaksi = mysqli_query($conn, $query);
         .text-right { text-align: right; }
     </style>
 </head>
-<body onload="window.print(); setTimeout(function(){ window.location.href = '../dashboard.php'; }, 500);">
+<body onload="window.print(); setTimeout(function(){ window.location.href = '../riwayat_lengkap.php'; }, 500);">
     <h2>Laporan Transaksi</h2>
     <table>
         <thead>

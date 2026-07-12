@@ -394,10 +394,11 @@ button:hover {
                 <ul id="nav-menu">
                     <li><a href="<?php echo $base_url; ?>pages/dashboard.php">Dashboard</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/input.php">Input Transaksi</a></li>
-                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Input kategori</a></li>
-                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_akun.php">Input akun</a></li>
-                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tagihan.php">tagihan</a></li>
+                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Kategori</a></li>
+                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_akun.php">Akun Pembayaran</a></li>
+                    <li><a href="<?php echo $base_url; ?>pages/transaksi/tagihan.php">Tagihan</a></li>
                     <li><a href="<?php echo $base_url; ?>pages/transaksi/target.php">Target</a></li>
+    				<li><a href="<?php echo $base_url; ?>pages/transaksi/penyisihan_dana.php">Alokasi</a></li>
                     <li><a href="<?php echo $base_url; ?>index.php">Logout</a></li>
                 </ul>
             </nav>
