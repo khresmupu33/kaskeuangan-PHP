@@ -85,9 +85,51 @@ if ($res_kat) {
         .btn-selesai { display: block; text-align: center; background: #3498db; color: #fff; padding: 12px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }
         .btn-selesai:hover { background: #2980b9; }
         @media screen and (max-width: 768px) { body { padding: 10px; } .setup-card { padding: 16px; } }
+         /* Overlay & Lingkaran Loading Spinner (Benar-benar di paling depan) */
+#page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #f4f7f6; /* Warna latar belakang loading */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2147483647; /* Nilai z-index maksimal agar tidak tertutup apa pun */
+    opacity: 0; 
+    pointer-events: none;
+    transition: opacity 0.4s ease-in-out;
+}
+
+/* Saat aktif, layar tertutup penuh oleh loader */
+#page-loader.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Desain Lingkaran Spinner #2c3e50 */
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(44, 62, 80, 0.15);
+    border-top: 5px solid #2c3e50; 
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    position: relative;
+    z-index: 2147483647;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
     </style>
 </head>
 <body>
+        <div id="page-loader" class="show">
+        <div class="spinner"></div>
+    </div>
     <div class="container">
         <h1>Setup Akun Pertama</h1>
         <p style="color: #fff; margin-bottom: 20px;">Selamat datang, <strong><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></strong>! Mari buat akun pembayaran dan kategori pertama Anda.</p>
@@ -108,7 +150,7 @@ if ($res_kat) {
                 </div>
                 <div class="form-group">
                     <label>Saldo Awal (Rp)</label>
-                    <input type="text" name="saldo_awal" placeholder="0" required value="">
+                    <input type="text" id="saldo_awal" name="saldo_awal" placeholder="0" required value="">
                 </div>
                 <button type="submit" name="tambah_akun" style="background: #2c3e50;">Simpan Akun</button>
             </form>
@@ -159,5 +201,57 @@ if ($res_kat) {
             </div>
         <?php endif; ?>
     </div>
+
+    <script>
+        const inputSaldo = document.getElementById('saldo_awal');
+
+        function formatRupiah(angka, prefix) {
+            let number_string = angka.replace(/[^,\d]/g, '').toString(),
+                split = number_string.split(','),
+                sisa = split[0].length % 3,
+                rupiah = split[0].substr(0, sisa),
+                ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+            if (ribuan) {
+                let separator = sisa ? '.' : '';
+                rupiah += separator + ribuan.join('.');
+            }
+
+            rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+            return prefix === undefined ? rupiah : (rupiah ? prefix + rupiah : '');
+        }
+
+        inputSaldo.addEventListener('keyup', function(e) {
+            inputSaldo.value = formatRupiah(this.value);
+        });
+    </script>
+    <script>
+        // Hilangkan loader dan jalankan fade-in saat halaman selesai dimuat
+window.addEventListener('DOMContentLoaded', () => {
+    const loader = document.getElementById('page-loader');
+    document.body.classList.add('fade-in');
+    setTimeout(() => {
+        loader.classList.remove('show');
+    }, 50);
+});
+
+// Tampilkan loader dan jalankan fade-out saat pindah halaman
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute('onclick')) {
+        const targetUrl = link.href;
+        if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
+            e.preventDefault();
+            const loader = document.getElementById('page-loader');
+            loader.classList.add('show');
+            document.body.classList.remove('fade-in');
+            document.body.classList.add('fade-out');
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 400);
+        }
+    }
+});
+    </script>
 </body>
 </html>

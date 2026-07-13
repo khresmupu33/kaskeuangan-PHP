@@ -17,6 +17,47 @@ body {
     background-color: #f4f7f6;
     color: #333;
     line-height: 1.6;
+    padding-top: 90px;    /* Ruang aman agar konten tidak tertutup fixed header di atas (Desktop) */
+    padding-bottom: 70px;  /* Ruang aman agar konten tidak tertutup bottom tab bar di HP */
+}
+
+/* Overlay Paling Depan Menutup Segala Layar Putih */
+#page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #f4f7f6; /* Gunakan warna background halaman agar menyatu, atau #ffffff untuk putih total */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 21474; /* Nilai z-index maksimum di browser */
+    opacity: 0; 
+    pointer-events: none;
+    transition: opacity 0.4s ease-in-out;
+}
+
+/* Saat aktif, pastikan mutlak menutupi semua elemen lain */
+#page-loader.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(44, 62, 80, 0.15);
+    border-top: 5px solid #2c3e50; /* Warna lingkaran loading #2c3e50 */
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    position: relative;
+    z-index: 2147483647;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* Layout Container */
@@ -27,13 +68,17 @@ body {
     padding: 20px;
 }
 
-/* Navbar */
+/* Navbar Fixed di Atas */
 header {
     background: #2c3e50;
     color: #fff;
     padding: 1rem 0;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
     z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 header nav {
@@ -42,7 +87,7 @@ header nav {
     align-items: center;
 }
 
-/* Logo / Judul Brand di Navbar (Dibuat Flex agar logo dan teks sejajar) */
+/* Logo / Judul Brand di Navbar */
 .nav-brand {
     display: flex;
     align-items: center;
@@ -90,6 +135,11 @@ header nav ul li .drop-btn:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* Sembunyikan ikon khusus mobile di mode desktop */
+.mobile-icon {
+    display: none;
+}
+
 /* Dropdown Container */
 .dropdown {
     position: relative;
@@ -131,40 +181,9 @@ header nav ul li .drop-btn:hover {
     display: flex;
 }
 
-/* Tombol Hamburger 3 Bar (Default disembunyikan di Desktop) */
+/* Tombol Hamburger 3 Bar disembunyikan total */
 .hamburger {
     display: none;
-    flex-direction: column;
-    justify-content: space-between;
-    width: 30px;
-    height: 22px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    z-index: 10;
-}
-
-.hamburger span {
-    display: block;
-    width: 100%;
-    height: 3px;
-    background: #fff;
-    border-radius: 3px;
-    transition: all 0.3s ease-in-out;
-}
-
-/* Animasi Hamburger ke Huruf 'X' saat Aktif */
-.hamburger.active span:nth-child(1) {
-    transform: translateY(9.5px) rotate(45deg);
-}
-
-.hamburger.active span:nth-child(2) {
-    opacity: 0;
-}
-
-.hamburger.active span:nth-child(3) {
-    transform: translateY(-9.5px) rotate(-45deg);
 }
 
 .table-wrap {
@@ -349,84 +368,6 @@ button:hover {
     background: #ffd6d6 !important;
 }
 
-/* =========================================
-   MEDIA QUERY & HAMBURGER MENU UNTUK HP (<= 768px)
-   ========================================= */
-@media screen and (max-width: 768px) {
-    .container {
-        width: 100%;
-        padding: 10px;
-    }
-
-    .hamburger {
-        display: flex;
-    }
-
-    header nav {
-        flex-wrap: wrap;
-    }
-
-    /* Menu turun ke bawah & disembunyikan secara default */
-    header nav ul {
-        display: none;
-        flex-direction: column;
-        width: 100%;
-        background: #34495e;
-        margin-top: 15px;
-        padding: 10px 0;
-        border-radius: 6px;
-        gap: 0;
-    }
-
-    header nav ul.show {
-        display: flex;
-    }
-
-    header nav ul li {
-        width: 100%;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    header nav ul li:last-child {
-        border-bottom: none;
-    }
-
-    header nav ul li a, 
-    header nav ul li .drop-btn {
-        padding: 14px 20px;
-        font-size: 15px;
-        width: 100%;
-        border-radius: 0;
-        text-align: left;
-    }
-
-    /* Di HP, dropdown diubah jadi statis mengikuti alur list agar mudah diklik */
-    .dropdown-content {
-        position: static;
-        box-shadow: none;
-        background: #2c3e50;
-        padding-left: 15px;
-        display: none;
-    }
-
-    .dropdown.active .dropdown-content {
-        display: flex;
-    }
-    
-    .dashboard-cards {
-        flex-direction: column;
-    }
-
-    .info-card {
-        min-width: 100%;
-    }
-
-    table th, table td {
-        padding: 8px;
-        font-size: 13px;
-    }
-}
-
 /* Mengatur kotak card agar bisa scroll Y dengan max-height di Desktop */
 .dashboard-cards.dashboard-scroll {
     max-height: 250px;
@@ -435,20 +376,7 @@ button:hover {
     padding-right: 5px;
 }
 
-/* Media Query untuk HP (Layar <= 768px) */
-@media screen and (max-width: 768px) {
-    .dashboard-cards.dashboard-scroll {
-        max-height: 220px;
-        flex-direction: column;
-        flex-wrap: nowrap;
-    }
-    
-    .dashboard-cards.dashboard-scroll .info-card {
-        width: 100%;
-        min-width: 100%;
-    }
-}
-/* Styling Utama (Desktop / Default) */
+/* Styling Utama Overview Riwayat */
 .overview-riwayat-box {
     display: flex;
     justify-content: space-between;
@@ -479,7 +407,7 @@ button:hover {
     align-items: center;
     gap: 6px;
     transition: background 0.2s;
-    white-space: nowrap; /* Mencegah teks tombol turun sendiri */
+    white-space: nowrap;
 }
 
 .overview-riwayat-box a:hover {
@@ -487,50 +415,177 @@ button:hover {
 }
 
 /* =========================================
-   MEDIA QUERY UNTUK HP (Layar <= 768px)
+   MEDIA QUERY & BOTTOM TAB BAR UNTUK HP (<= 768px)
    ========================================= */
 @media screen and (max-width: 768px) {
+    body {
+        padding-top: 85px; /* Jarak aman atas di mobile agar konten tidak mepet/ketimpa */
+    }
+
+    .container {
+        width: 100%;
+        padding: 12px;
+    }
+
+    /* Sembunyikan default menu desktop header */
+    header nav ul {
+        display: none !important;
+    }
+
+    /* Ubah navigasi bawah menjadi Bottom Tab Bar Fixed */
+    header nav ul#nav-menu {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #2c3e50;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        height: 60px;
+        margin: 0;
+        padding: 0;
+        border-radius: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 9999;
+    }
+
+    header nav ul#nav-menu li {
+        width: auto;
+        border: none;
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+
+    header nav ul#nav-menu li a, 
+    header nav ul#nav-menu li .drop-btn {
+        padding: 6px 2px;
+        font-size: 10px;
+        width: 100%;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        color: #fff;
+    }
+
+    .mobile-icon {
+        display: block;
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    /* Dropdown di HP diubah menjadi Dropup (muncul ke atas dari Tab Bar) */
+    .dropdown.active .dropdown-content {
+        display: flex !important;
+    }
+
+    .dropdown-content {
+        position: fixed !important;
+        bottom: 60px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        top: auto !important;
+        width: 90% !important;
+        max-width: 320px;
+        background: #34495e !important;
+        border-radius: 10px 10px 0 0 !important;
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.3) !important;
+        padding: 8px 0 !important;
+        z-index: 10000 !important;
+    }
+
+    .dropdown-content li {
+        width: 100%;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .dropdown-content li:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-content li a {
+        padding: 12px 15px !important;
+        font-size: 13px !important;
+        text-align: center !important;
+        justify-content: center !important;
+        display: flex !important;
+    }
+
+    .dashboard-cards {
+        flex-direction: column;
+    }
+
+    .info-card {
+        min-width: 100%;
+    }
+
+    table th, table td {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .dashboard-cards.dashboard-scroll {
+        max-height: 220px;
+        flex-direction: column;
+        flex-wrap: nowrap;
+    }
+    
+    .dashboard-cards.dashboard-scroll .info-card {
+        width: 100%;
+        min-width: 100%;
+    }
+
     .overview-riwayat-box {
-        flex-direction: column; /* Mengubah arah dari sejajar ke bertumpuk ke bawah */
-        align-items: flex-start; /* Merapikan teks ke kiri */
-        gap: 12px; /* Memberi jarak antara teks dan tombol */
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
         padding: 12px 15px;
     }
 
     .overview-riwayat-box h3 {
-        font-size: 14px; /* Sedikit memperkecil font di HP agar tidak terlalu penuh */
+        font-size: 14px;
         line-height: 1.4;
     }
 
     .overview-riwayat-box a {
-        width: 100%; /* Tombol dibuat melebar penuh di HP agar mudah dipencet */
-        justify-content: center; /* Teks di dalam tombol diposisikan di tengah */
+        width: 100%;
+        justify-content: center;
         padding: 10px 16px;
     }
 }
 </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <nav>
+    <div id="page-loader" class="show">
+        <div class="spinner"></div>
+    </div>
 
+    <header>
+        <div class="container" style="padding-top: 10px; padding-bottom: 10px;">
+            <nav>
                 <a href="<?php echo $base_url; ?>pages/dashboard.php" class="nav-brand">
                     <img src="<?php echo $base_url; ?>includes/KasKeuanganKhresmupu.png" alt="Logo Kas Keuangan Khresmupu">
                     <span>KasKeuangan Khresmupu</span>
                 </a>
-                
-                <button class="hamburger" id="hamburger-btn" aria-label="Menu">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
 
                 <ul id="nav-menu">
-                    <li><a href="<?php echo $base_url; ?>pages/dashboard.php">Beranda</a></li>
+                    <li>
+                        <a href="<?php echo $base_url; ?>pages/dashboard.php">
+                            <span class="mobile-icon">🏠</span>
+                            <span>Beranda</span>
+                        </a>
+                    </li>
                     
                     <li class="dropdown" id="dropdown-pencatatan">
-                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-pencatatan')">Pencatatan ▾</button>
+                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-pencatatan')">
+                            <span class="mobile-icon">📝</span>
+                            <span>Catat ▾</span>
+                        </button>
                         <ul class="dropdown-content">
                             <li><a href="<?php echo $base_url; ?>pages/transaksi/input.php">Catat Transaksi</a></li>
                             <li><a href="<?php echo $base_url; ?>pages/transaksi/tagihan.php">Daftar Tagihan</a></li>
@@ -538,7 +593,10 @@ button:hover {
                     </li>
 
                     <li class="dropdown" id="dropdown-batasan">
-                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-batasan')">Batasan & Alokasi ▾</button>
+                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-batasan')">
+                            <span class="mobile-icon">🎯</span>
+                            <span>Alokasi ▾</span>
+                        </button>
                         <ul class="dropdown-content">
                             <li><a href="<?php echo $base_url; ?>pages/transaksi/target.php">Target Pengeluaran</a></li>
                             <li><a href="<?php echo $base_url; ?>pages/transaksi/penyisihan_dana.php">Alokasi & Celengan</a></li>
@@ -546,34 +604,67 @@ button:hover {
                     </li>
 
                     <li class="dropdown" id="dropdown-pengaturan">
-                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-pengaturan')">Pengaturan ▾</button>
+                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-pengaturan')">
+                            <span class="mobile-icon">⚙️</span>
+                            <span>Atur ▾</span>
+                        </button>
                         <ul class="dropdown-content">
-                            <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Jenis Pengeluaran</a></li>
+                            <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Kategori</a></li>
                             <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_akun.php">Dompet / Rekening</a></li>
                         </ul>
                     </li>
-					<li><a href="<?php echo $base_url; ?>pages/tentang.php">Tentang Website</a></li>
-                    <li><a href="<?php echo $base_url; ?>index.php" style="color: #e74c3c;">Keluar</a></li>
+
+                    <li>
+                        <a href="<?php echo $base_url; ?>pages/tentang.php">
+                            <span class="mobile-icon">ℹ️</span>
+                            <span>Tentang</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="<?php echo $base_url; ?>index.php" style="color: #ffcccc;">
+                            <span class="mobile-icon">🚪</span>
+                            <span>Keluar</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </div>
     </header>
     
     <script>
-        const hamburgerBtn = document.getElementById('hamburger-btn');
-        const navMenu = document.getElementById('nav-menu');
-
-        hamburgerBtn.addEventListener('click', () => {
-            hamburgerBtn.classList.toggle('active');
-            navMenu.classList.toggle('show');
+        // Jalankan Fade In & Hilangkan Loader saat halaman selesai dimuat
+        window.addEventListener('DOMContentLoaded', () => {
+            const loader = document.getElementById('page-loader');
+            document.body.classList.add('fade-in');
+            setTimeout(() => {
+                loader.classList.remove('show');
+            }, 50);
         });
 
-        // Fungsi Toggle Dropdown
+        // Tangkap klik link navigasi untuk jalankan Fade Out dan munculkan loader bersamaan
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute('onclick')) {
+                const targetUrl = link.href;
+                if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
+                    e.preventDefault();
+                    const loader = document.getElementById('page-loader');
+                    loader.classList.add('show');
+                    document.body.classList.remove('fade-in');
+                    document.body.classList.add('fade-out');
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 400); // Cocokkan durasi dengan transition CSS
+                }
+            }
+        });
+
+        // Fungsi Toggle Dropdown / Dropup
         function toggleDropdown(event, dropdownId) {
             event.stopPropagation();
             const dropdown = document.getElementById(dropdownId);
             
-            // Tutup dropdown lain jika ada yang terbuka (khusus desktop)
             document.querySelectorAll('.dropdown').forEach(item => {
                 if (item.id !== dropdownId) {
                     item.classList.remove('active');
@@ -590,4 +681,4 @@ button:hover {
             });
         });
     </script>
-    <main class="container" style="padding-top: 20px;">
+    <main class="container">

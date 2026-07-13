@@ -128,34 +128,46 @@ if ($filter_akun_id > 0) {
             margin: 0 auto;
             padding: 20px;
         }
-        .month-group {
-            margin-top: 25px;
-            margin-bottom: 20px;
+        .month-group-container {
+            margin-bottom: 30px;
         }
         .month-section-title {
             position: sticky;
             top: 0;
             background-color: #eaeded;
             color: #2c3e50;
-            z-index: 10;
+            z-index: 12;
             padding: 10px 20px;
             margin-top: 25px;
-            margin-bottom: 10px;
+            margin-bottom: 0;
             border-bottom: 2px solid #2c3e50;
             font-size: 16px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .table-wrap {
-            overflow-x: auto;
+            overflow: auto;
+            max-height: 65vh;
             max-width: 100%;
             margin-bottom: 20px;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling di iOS */
+            -webkit-overflow-scrolling: touch;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 5px;
+            margin-top: 0;
             background: #fff;
+        }
+        table thead {
+            position: sticky;
+            top: 0;
+            z-index: 11;
+        }
+        table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #2c3e50;
+            color: white;
+            z-index: 11;
         }
         table th, table td {
             border: 1px solid #ddd;
@@ -163,10 +175,6 @@ if ($filter_akun_id > 0) {
             text-align: left;
             vertical-align: top;
             white-space: nowrap;
-        }
-        table th {
-            background-color: #2c3e50;
-            color: white;
         }
         .inline-input, .inline-select {
             width: 100%;
@@ -198,8 +206,8 @@ if ($filter_akun_id > 0) {
         }
 
         /* =========================================
-           RESPONSIF UNTUK HP (Layar <= 768px)
-           ========================================= */
+            RESPONSIF UNTUK HP (Layar <= 768px)
+            ========================================= */
         @media screen and (max-width: 768px) {
             .container { 
                 width: 100%; 
@@ -235,9 +243,49 @@ if ($filter_akun_id > 0) {
                 font-size: 12px;
             }
         }
+        /* Overlay & Lingkaran Loading Spinner (Benar-benar di paling depan) */
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2147483647;
+            opacity: 0; 
+            pointer-events: none;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        #page-loader.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(44, 62, 80, 0.15);
+            border-top: 5px solid #2c3e50; 
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            position: relative;
+            z-index: 2147483647;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <div id="page-loader" class="show">
+        <div class="spinner"></div>
+    </div>
     <main class="container">
         <div class="header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2>Semua Riwayat Transaksi</h2>
@@ -303,101 +351,103 @@ if ($filter_akun_id > 0) {
         <?php else: ?>
             <div>
                 <?php foreach ($transaksi_per_bulan as $bulan => $transaksi_grup): ?>
-                    <h3 class="month-section-title" data-bulan="<?php echo $bulan; ?>">
-                        <?php echo $bulan; ?>
-                    </h3>
+                    <div class="month-group-container">
+                        <h3 class="month-section-title" data-bulan="<?php echo $bulan; ?>">
+                            <?php echo $bulan; ?>
+                        </h3>
 
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" id="select-all"></th>
-                                    <th>Tanggal</th>
-                                    <th>Deskripsi</th>
-                                    <th>Kategori</th>
-                                    <th>Akun</th>
-                                    <th>Tipe</th>
-                                    <?php foreach ($tampil_akun as $akun): ?>
-                                        <th>Saldo <?php echo htmlspecialchars($akun['nama_akun']); ?></th>
-                                    <?php endforeach; ?>
-                                    <th>Masuk</th>
-                                    <th>Keluar</th>
-                                    <th>Total Saldo</th>
-                                    <th>Bukti</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($transaksi_grup as $tr): 
-                                    $id_akun_tr = (int) $tr['akun_id'];
-                                    $pemasukan = (float) $tr['pemasukan'];
-                                    $pengeluaran = (float) $tr['pengeluaran'];
-
-                                    $saldo_saat_ini[$id_akun_tr] = ($saldo_saat_ini[$id_akun_tr] ?? 0) + ($pemasukan - $pengeluaran);
-                                    $running_total = array_sum($saldo_saat_ini);
-                                ?>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
                                     <tr>
-                                        <td><input type="checkbox" class="row-checkbox" data-masuk="<?php echo (float)$tr['pemasukan']; ?>" data-keluar="<?php echo (float)$tr['pengeluaran']; ?>"></td>
-                                        <td class="edit-cell" data-field="tanggal" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo htmlspecialchars($tr['tanggal'], ENT_QUOTES); ?>" data-type="date">
-                                            <?php echo htmlspecialchars($tr['tanggal']); ?>
-                                        </td>
-                                        <td class="edit-cell" data-field="deskripsi" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo htmlspecialchars($tr['deskripsi'], ENT_QUOTES); ?>" data-type="text">
-                                            <?php echo htmlspecialchars($tr['deskripsi']); ?>
-                                        </td>
-                                        <td class="edit-cell" data-field="kategori_id" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (int) $tr['kategori_id']; ?>" data-type="select-kategori">
-                                            <?php echo htmlspecialchars($tr['nama_kategori']); ?>
-                                        </td>
-                                        <td data-field="akun_id" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (int) $tr['akun_id']; ?>" data-type="select-akun">
-                                            <?php echo htmlspecialchars($tr['nama_akun']); ?>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($tr['tipe_transaksi']); ?></td>
+                                        <th><input type="checkbox" id="select-all"></th>
+                                        <th>Tanggal</th>
+                                        <th>Deskripsi</th>
+                                        <th>Kategori</th>
+                                        <th>Akun</th>
+                                        <th>Tipe</th>
                                         <?php foreach ($tampil_akun as $akun): ?>
-                                            <td>Rp <?php echo number_format($saldo_saat_ini[$akun['id']] ?? 0, 0, ',', '.'); ?></td>
+                                            <th>Saldo <?php echo htmlspecialchars($akun['nama_akun']); ?></th>
                                         <?php endforeach; ?>
-                                        <td  data-field="pemasukan" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pemasukan; ?>" data-type="number">
-                                            <?php echo number_format($pemasukan, 0, ',', '.'); ?>
-                                        </td>
-                                        <td  data-field="pengeluaran" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pengeluaran; ?>" data-type="number">
-                                            <?php echo number_format($pengeluaran, 0, ',', '.'); ?>
-                                        </td>
-                                        <td><strong>Rp <?php echo number_format($running_total, 0, ',', '.'); ?></strong></td>
-                                        <td>
-                                            <?php if (!empty($tr['path_bukti'])): ?>
-                                                <?php  
-                                                    $ext = strtolower(pathinfo($tr['path_bukti'], PATHINFO_EXTENSION));
-                                                    $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif']);
-                                                    $is_zip = ($ext === 'zip');
-                                                    $file_path = '../assets/img/' . $tr['path_bukti'];
-                                                ?>
-                                                <?php if ($is_image): ?>
-                                                    <a href="javascript:void(0);" onclick="bukaModal(this)">Lihat</a>
-                                                    <div class="overlay-bukti" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
-                                                        <div style="position: relative; max-width: 95%; max-height: 95%; text-align: center;">
-                                                            <span onclick="tutupModal(this)" style="position: absolute; top: -45px; right: 0; font-size: 35px; color: white; cursor: pointer; font-weight: bold; background: rgba(0,0,0,0.6); width: 42px; height: 42px; text-align: center; line-height: 40px; border-radius: 50%;">&times;</span>
-                                                            <img src="<?php echo htmlspecialchars($file_path); ?>" alt="Bukti" style="max-width: 100%; max-height: 85vh; border-radius: 8px;">
-                                                        </div>
-                                                    </div>
-                                                <?php elseif ($is_zip): ?>
-                                                    <a href="javascript:void(0);" onclick="bukaModalZip(this, '<?php echo htmlspecialchars($tr['path_bukti'], ENT_QUOTES); ?>')">Lihat Isi ZIP</a>
-                                                    <div class="overlay-bukti" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
-                                                        <div style="position: relative; width: 600px; max-width: 95%; background: white; padding: 25px; border-radius: 8px; max-height: 85vh; overflow-y: auto;">
-                                                            <span onclick="tutupModal(this)" style="position: absolute; top: 12px; right: 18px; font-size: 28px; cursor: pointer;">&times;</span>
-                                                            <h4>Daftar File & Pratinjau dalam ZIP:</h4>
-                                                            <div class="zip-content-container">Memuat isi...</div>
-                                                        </div>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <a href="<?php echo htmlspecialchars($file_path); ?>" target="_blank">Lihat File</a>
-                                                <?php endif; ?>
-                                            <?php else: ?> - <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <a href="hapus_transaksi.php?id=<?php echo $tr['id']; ?>" onclick="return confirm('Yakin hapus? Saldo akan terkoreksi.')" style="color:red;">Hapus</a>
-                                        </td>
+                                        <th>Masuk</th>
+                                        <th>Keluar</th>
+                                        <th>Total Saldo</th>
+                                        <th>Bukti</th>
+                                        <th>Aksi</th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($transaksi_grup as $tr): 
+                                        $id_akun_tr = (int) $tr['akun_id'];
+                                        $pemasukan = (float) $tr['pemasukan'];
+                                        $pengeluaran = (float) $tr['pengeluaran'];
+
+                                        $saldo_saat_ini[$id_akun_tr] = ($saldo_saat_ini[$id_akun_tr] ?? 0) + ($pemasukan - $pengeluaran);
+                                        $running_total = array_sum($saldo_saat_ini);
+                                    ?>
+                                        <tr>
+                                            <td><input type="checkbox" class="row-checkbox" data-masuk="<?php echo (float)$tr['pemasukan']; ?>" data-keluar="<?php echo (float)$tr['pengeluaran']; ?>"></td>
+                                            <td class="edit-cell" data-field="tanggal" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo htmlspecialchars($tr['tanggal'], ENT_QUOTES); ?>" data-type="date">
+                                                <?php echo htmlspecialchars($tr['tanggal']); ?>
+                                            </td>
+                                            <td class="edit-cell" data-field="deskripsi" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo htmlspecialchars($tr['deskripsi'], ENT_QUOTES); ?>" data-type="text">
+                                                <?php echo htmlspecialchars($tr['deskripsi']); ?>
+                                            </td>
+                                            <td class="edit-cell" data-field="kategori_id" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (int) $tr['kategori_id']; ?>" data-type="select-kategori">
+                                                <?php echo htmlspecialchars($tr['nama_kategori']); ?>
+                                            </td>
+                                            <td data-field="akun_id" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (int) $tr['akun_id']; ?>" data-type="select-akun">
+                                                <?php echo htmlspecialchars($tr['nama_akun']); ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($tr['tipe_transaksi']); ?></td>
+                                            <?php foreach ($tampil_akun as $akun): ?>
+                                                <td>Rp <?php echo number_format($saldo_saat_ini[$akun['id']] ?? 0, 0, ',', '.'); ?></td>
+                                            <?php endforeach; ?>
+                                            <td data-field="pemasukan" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pemasukan; ?>" data-type="number">
+                                                <?php echo number_format($pemasukan, 0, ',', '.'); ?>
+                                            </td>
+                                            <td data-field="pengeluaran" data-id="<?php echo (int) $tr['id']; ?>" data-value="<?php echo (float) $pengeluaran; ?>" data-type="number">
+                                                <?php echo number_format($pengeluaran, 0, ',', '.'); ?>
+                                            </td>
+                                            <td><strong>Rp <?php echo number_format($running_total, 0, ',', '.'); ?></strong></td>
+                                            <td>
+                                                <?php if (!empty($tr['path_bukti'])): ?>
+                                                    <?php  
+                                                        $ext = strtolower(pathinfo($tr['path_bukti'], PATHINFO_EXTENSION));
+                                                        $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif']);
+                                                        $is_zip = ($ext === 'zip');
+                                                        $file_path = '../assets/img/' . $tr['path_bukti'];
+                                                    ?>
+                                                    <?php if ($is_image): ?>
+                                                        <a href="javascript:void(0);" onclick="bukaModal(this)">Lihat</a>
+                                                        <div class="overlay-bukti" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+                                                            <div style="position: relative; max-width: 95%; max-height: 95%; text-align: center;">
+                                                                <span onclick="tutupModal(this)" style="position: absolute; top: -45px; right: 0; font-size: 35px; color: white; cursor: pointer; font-weight: bold; background: rgba(0,0,0,0.6); width: 42px; height: 42px; text-align: center; line-height: 40px; border-radius: 50%;">&times;</span>
+                                                                <img src="<?php echo htmlspecialchars($file_path); ?>" alt="Bukti" style="max-width: 100%; max-height: 85vh; border-radius: 8px;">
+                                                            </div>
+                                                        </div>
+                                                    <?php elseif ($is_zip): ?>
+                                                        <a href="javascript:void(0);" onclick="bukaModalZip(this, '<?php echo htmlspecialchars($tr['path_bukti'], ENT_QUOTES); ?>')">Lihat Isi ZIP</a>
+                                                        <div class="overlay-bukti" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+                                                            <div style="position: relative; width: 600px; max-width: 95%; background: white; padding: 25px; border-radius: 8px; max-height: 85vh; overflow-y: auto;">
+                                                                <span onclick="tutupModal(this)" style="position: absolute; top: 12px; right: 18px; font-size: 28px; cursor: pointer;">&times;</span>
+                                                                <h4>Daftar File & Pratinjau dalam ZIP:</h4>
+                                                                <div class="zip-content-container">Memuat isi...</div>
+                                                            </div>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <a href="<?php echo htmlspecialchars($file_path); ?>" target="_blank">Lihat File</a>
+                                                    <?php endif; ?>
+                                                <?php else: ?> - <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <a href="hapus_transaksi.php?id=<?php echo $tr['id']; ?>" onclick="return confirm('Yakin hapus? Saldo akan terkoreksi.')" style="color:red;">Hapus</a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -558,6 +608,33 @@ if ($filter_akun_id > 0) {
             hitungTotal();
         });
     }
+
+    // Hilangkan loader dan jalankan fade-in saat halaman selesai dimuat
+    window.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('page-loader');
+        document.body.classList.add('fade-in');
+        setTimeout(() => {
+            loader.classList.remove('show');
+        }, 50);
+    });
+
+    // Tampilkan loader dan jalankan fade-out saat pindah halaman
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute('onclick')) {
+            const targetUrl = link.href;
+            if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
+                e.preventDefault();
+                const loader = document.getElementById('page-loader');
+                loader.classList.add('show');
+                document.body.classList.remove('fade-in');
+                document.body.classList.add('fade-out');
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 400);
+            }
+        }
+    });
     </script>
 </body>
 </html>

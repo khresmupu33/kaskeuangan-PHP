@@ -336,7 +336,12 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
     $semua_transaksi[] = $row;
 }
 ?>
-
+<div class="welcome-section" style="margin-bottom: 20px;">
+    <h1>Dashboard Keuangan</h1>
+    <p style="color: #555; font-size: 16px;">
+        Selamat datang kembali, <strong style="color: #2c3e50;"><?= htmlspecialchars(ucfirst($username)); ?></strong>! Berikut ringkasan aktivitas keuangan Anda hari ini.
+    </p>
+</div>
 <div class="dashboard-cards dashboard-scroll">
     <div class="info-card total">
         <h3>Saldo Bersih</h3>
@@ -414,7 +419,7 @@ while ($row = mysqli_fetch_assoc($query_transaksi)) {
                     </p>
                 <?php endif; ?>
 
-                <button onclick="bukaModalPelunasanDash(<?php echo (int)$tag['id']; ?>, '<?php echo htmlspecialchars($tag['nama_tagihan'], ENT_QUOTES); ?>', <?php echo (float)$tag['sisa_nominal']; ?>)" style="background: #2c3e50; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 10px; width: 100%;">Bayar / Lunas</button>
+                <button onclick="bukaModalPelunasanDash(<?php echo (int)$tag['id']; ?>, '<?php echo htmlspecialchars($tag['nama_tagihan'], ENT_QUOTES); ?>', <?php echo (float)$tag['sisa_nominal']; ?>)" style="background: #2d5378; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 10px; width: 100%;">Bayar / Lunas</button>
             </div>
         <?php endforeach; ?>
     <?php else: ?>

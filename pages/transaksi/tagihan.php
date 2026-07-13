@@ -51,7 +51,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_lunas'])) {
     $nominal_bayar = (float)$_POST['nominal_bayar'];
     $tanggal_trx = $today; 
 
-    // Handle Upload Bukti ZIP Pelunasan (Disamakan dengan format yang diinginkan)
+    // Cek Saldo Akun Pembayaran saat Pelunasan
+    $q_akun_cek = mysqli_query($conn, "SELECT saldo_akhir FROM akun_pembayaran WHERE id = $akun_id AND user_id = $user_id");
+    $d_akun_cek = mysqli_fetch_assoc($q_akun_cek);
+    if ($d_akun_cek && (float)$d_akun_cek['saldo_akhir'] < $nominal_bayar) {
+        echo "<script>alert('Gagal: Saldo akun pembayaran tidak cukup untuk melakukan pelunasan ini!'); window.location='tagihan.php';</script>";
+        exit;
+    }
+
+    // Handle Upload Bukti ZIP Pelunasan
     $path_bukti = null;
     if (isset($_FILES['bukti_bayar_lunas']) && $_FILES['bukti_bayar_lunas']['error'] == 0) {
         if (!is_dir($folder_user)) {
@@ -106,6 +114,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tambah_tagihan'])) {
     $tenggat_waktu = $_POST['tenggat_waktu']; 
     $tanggal_trx = $today; 
 
+    // Validasi Tanggal (Tidak boleh kurang dari hari ini)
+    if ($tenggat_waktu < $today) {
+        echo "<script>alert('Gagal: Tenggat waktu tidak boleh kurang dari tanggal hari ini!'); window.location='tagihan.php';</script>";
+        exit;
+    }
+
+    // Validasi Bunga (Maksimal 100%)
+    if ($bunga_persen < 0 || $bunga_persen > 100) {
+        echo "<script>alert('Gagal: Persentase bunga harus berada di antara 0% sampai 100%!'); window.location='tagihan.php';</script>";
+        exit;
+    }
+
+    // Jika PIUTANG, cek apakah saldo akun mencukupi nominal murni
+    if ($jenis === 'PIUTANG') {
+        $akun_id_cek = (int)$_POST['akun_id'];
+        $q_akun_piutang = mysqli_query($conn, "SELECT saldo_akhir, nama_akun FROM akun_pembayaran WHERE id = $akun_id_cek AND user_id = $user_id");
+        $d_akun_piutang = mysqli_fetch_assoc($q_akun_piutang);
+        if ($d_akun_piutang && (float)$d_akun_piutang['saldo_akhir'] < $total_nominal_murni) {
+            echo "<script>alert('Peringatan: Saldo akun \"" . htmlspecialchars($d_akun_piutang['nama_akun']) . "\" gak cukup untuk membuat transaksi piutang ini (Saldo: Rp " . number_format($d_akun_piutang['saldo_akhir'], 0, ',', '.') . ")!'); window.location='tagihan.php';</script>";
+            exit;
+        }
+    }
+
     $frekuensi = ($jenis === 'RUTIN') ? $_POST['frekuensi'] : 'SEKALI';
 
     // Hitung total nominal setelah bunga
@@ -120,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tambah_tagihan'])) {
         ? "'" . mysqli_real_escape_string($conn, $_POST['tempat_bayar']) . "'" 
         : "NULL";
 
-    // Handle Upload Bukti ZIP Tagihan Awal (Disamakan dengan format yang diinginkan)
+    // Handle Upload Bukti ZIP Tagihan Awal
     $path_bukti_awal = null;
     if (isset($_FILES['bukti_awal']) && $_FILES['bukti_awal']['error'] == 0) {
         if (!is_dir($folder_user)) {
@@ -217,13 +248,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tambah_tagihan'])) {
             </div>
             
             <div class="form-group" id="bunga_wrapper" style="margin-bottom: 12px;">
-                <label>Bunga (%) - Opsional</label>
-                <input type="number" step="0.01" name="bunga_persen" id="bunga_persen" placeholder="0.00" style="width: 100%; padding: 6px;">
+                <label>Bunga (%) - Opsional (Maksimal 100)</label>
+                <input type="number" step="0.01" min="0" max="100" name="bunga_persen" id="bunga_persen" placeholder="0.00" style="width: 100%; padding: 6px;">
             </div>
 
             <div class="form-group" style="margin-bottom: 12px;">
                 <label>Tenggat Waktu / Tanggal Jatuh Tempo</label>
-                <input type="date" name="tenggat_waktu" required value="<?= date('Y-m-d') ?>" style="width: 100%; padding: 6px;">
+                <input type="date" name="tenggat_waktu" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>" style="width: 100%; padding: 6px;">
             </div>
             <div class="form-group" style="margin-bottom: 12px;">
                 <label>Tempat Bayar / Link Pembayaran (Opsional)</label>
@@ -371,14 +402,14 @@ function toggleFormJenis() {
     if (jenis === 'RUTIN') {
         frekuensiWrapper.style.display = 'block';
         konfirmasiAwal.style.display = 'none'; 
-        bungaWrapper.style.display = 'none'; // Sembunyikan Bunga untuk Rutin
+        bungaWrapper.style.display = 'none'; 
         inputAkun.removeAttribute('required');
         inputKat.removeAttribute('required');
-        inputBunga.value = ''; // Reset nilai bunga
+        inputBunga.value = ''; 
     } else {
         frekuensiWrapper.style.display = 'none';
         konfirmasiAwal.style.display = 'block';
-        bungaWrapper.style.display = 'block'; // Tampilkan kembali Bunga untuk Hutang/Piutang
+        bungaWrapper.style.display = 'block'; 
         inputAkun.setAttribute('required', 'true');
         inputKat.setAttribute('required', 'true');
     }
@@ -402,6 +433,12 @@ document.querySelectorAll('input.format-uang').forEach(input => {
         if (hiddenInput) hiddenInput.value = value;
         this.value = value ? value.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "";
     });
+});
+
+// Validasi input bunga real-time di form
+document.getElementById('bunga_persen').addEventListener('input', function() {
+    if (this.value > 100) this.value = 100;
+    if (this.value < 0) this.value = 0;
 });
 
 window.onload = function() {

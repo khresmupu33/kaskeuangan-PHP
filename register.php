@@ -82,9 +82,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .form-group {
             margin-bottom: 15px;
         }
+         /* Overlay & Lingkaran Loading Spinner (Benar-benar di paling depan) */
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2147483647;
+            opacity: 0; 
+            pointer-events: none;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        #page-loader.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(44, 62, 80, 0.15);
+            border-top: 5px solid #2c3e50; 
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            position: relative;
+            z-index: 2147483647;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <div id="page-loader" class="show">
+        <div class="spinner"></div>
+    </div>
     <div class="register-card">
         <h2>Registrasi</h2>
         <?php if(isset($error)) echo "<p style='color:red; font-size:14px; margin-bottom:12px; text-align:center;'>$error</p>"; ?>
@@ -98,5 +138,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <a href="index.php" style="color: #3498db; text-decoration: none; font-weight: bold;">Kembali ke Login</a>
         </p>
     </div>
+     <script>
+        // Hilangkan loader dan jalankan fade-in saat halaman selesai dimuat
+window.addEventListener('DOMContentLoaded', () => {
+    const loader = document.getElementById('page-loader');
+    document.body.classList.add('fade-in');
+    setTimeout(() => {
+        loader.classList.remove('show');
+    }, 50);
+});
+
+// Tampilkan loader dan jalankan fade-out saat pindah halaman
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute('onclick')) {
+        const targetUrl = link.href;
+        if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
+            e.preventDefault();
+            const loader = document.getElementById('page-loader');
+            loader.classList.add('show');
+            document.body.classList.remove('fade-in');
+            document.body.classList.add('fade-out');
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 400);
+        }
+    }
+});
+    </script>
 </body>
 </html>
