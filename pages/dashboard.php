@@ -376,9 +376,9 @@ if ($current_user_id) {
 <div class="target-wrapper">
     <?php if (count($targets) > 0): ?>
         <?php foreach ($targets as $target): ?>
-            <div class="target-card <?php echo $target['is_over'] ? 'over' : 'normal'; ?>">
+			<div class="target-card <?php echo $target['is_over'] ? 'over' : 'normal'; ?>">
                 <h4><?php echo htmlspecialchars($target['nama_kategori']); ?></h4>
-                <p class="small-text"><?php echo htmlspecialchars($target['deskripsi']); ?></p>
+                <p class="small-text" <?php echo $target['is_over'] ? 'style="color: black;"' : ''; ?>><?php echo htmlspecialchars($target['deskripsi']); ?></p>
 
                 <p><strong>Target:</strong> Rp <?php echo number_format($target['nominal_maksimal'], 0, ',', '.'); ?></p>
                 <p><strong>Terpakai:</strong> Rp <?php echo number_format($target['realisasi'], 0, ',', '.'); ?></p>
@@ -388,15 +388,15 @@ if ($current_user_id) {
                     <div class="progress-bar <?php echo $target['is_over'] ? 'over' : ''; ?>" style="width: <?php echo min($target['persen'], 100); ?>%;"></div>
                 </div>
 
-                <p class="small-text"><?php echo number_format($target['persen'], 1, ',', '.'); ?>% terpakai</p>
+                <p class="small-text" <?php echo $target['is_over'] ? 'style="color: black;"' : ''; ?>><?php echo number_format($target['persen'], 1, ',', '.'); ?>% terpakai</p>
 
                 <?php if ($target['is_over']): ?>
-                    <p class="warning-text">WARNING: Pengeluaran melebihi target.</p>
-                    <p class="small-text">Lebih: Rp <?php echo number_format(abs($target['sisa']), 0, ',', '.'); ?></p>
+                    <p class="warning-text" style="color: black;">WARNING: Pengeluaran melebihi target.</p>
+                    <p class="small-text" style="color: black;">Lebih: Rp <?php echo number_format(abs($target['sisa']), 0, ',', '.'); ?></p>
                 <?php endif; ?>
 
-                <p class="small-text">Tipe: <strong><?php echo htmlspecialchars($target['tipe_target']); ?></strong></p>
-                <p class="small-text">Tenggat: <strong><?php echo htmlspecialchars($target['tenggat_waktu']); ?></strong></p>
+                <p class="small-text" <?php echo $target['is_over'] ? 'style="color: black;"' : ''; ?>>Tipe: <strong><?php echo htmlspecialchars($target['tipe_target']); ?></strong></p>
+                <p class="small-text" <?php echo $target['is_over'] ? 'style="color: black;"' : ''; ?>>Tenggat: <strong><?php echo htmlspecialchars($target['tenggat_waktu']); ?></strong></p>
             </div>
         <?php endforeach; ?>
     <?php else: ?>
