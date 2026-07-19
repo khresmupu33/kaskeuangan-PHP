@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KasKeuangan Khresmupu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* RESET & BASE */
+        * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+        body { font-family: 'Poppins', sans-serif; background: #ffffff; color: #2c3e50; line-height: 1.7; }
+
+        /* NAVBAR */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: #2c3e50; padding: 15px 8%;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 999; box-shadow: 0 5px 20px rgba(0, 0, 0, .15);
+        }
+        .logo { font-size: 25px; font-weight: 700; color: #ffffff; text-decoration: none; }
+        .logo span { color: #ffffff; }
+        nav a { color: #ffffff; text-decoration: none; margin-left: 25px; font-size: 14px; transition: 0.3s; }
+        nav a:hover { text-decoration: none; color: #bdc3c7; }
+
+        /* HERO */
+        .hero {
+            height: 100vh; display: flex; justify-content: center; align-items: center;
+            text-align: center; background: #2c3e50; padding: 120px 10%;
+        }
+        .hero-logo {
+            width: 180px; height: 180px; border-radius: 50%; object-fit: cover;
+            border: 5px solid #ffffff; box-shadow: 0 15px 40px rgba(0, 0, 0, .3);
+            margin-bottom: 30px; animation: float 3s infinite ease-in-out;
+        }
+        .hero h1 { font-size: 58px; color: #ffffff; margin-bottom: 20px; }
+        .hero p { max-width: 750px; font-size: 18px; color: #ffffff; margin-bottom: 35px; }
+
+        /* BUTTON INTERACTIVE */
+        .btn {
+            display: inline-block; padding: 14px 35px; background: #ffffff;
+            color: #2c3e50; text-decoration: none; border-radius: 40px;
+            font-weight: 600; transition: 0.4s;
+        }
+        .btn:hover { background: #ecf0f1; transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        /* SECTIONS */
+        section { padding: 90px 8%; }
+        .title { text-align: center; font-size: 35px; margin-bottom: 15px; color: #2c3e50; }
+        .subtitle { text-align: center; margin-bottom: 50px; color: #2c3e50; }
+
+        /* CARDS */
+        .about { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; }
+        .card { background: #ffffff; border: 2px solid #2c3e50; padding: 35px; border-radius: 15px; transition: 0.3s; }
+        .card:hover { transform: translateY(-10px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .logo-box { text-align: center; }
+        .logo-box img { width: 160px; height: 160px; border-radius: 50%; border: 4px solid #2c3e50; margin-bottom: 20px; }
+
+        /* FEATURES INTERACTIVE */
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; }
+        .feature { 
+            border: 2px solid #2c3e50; padding: 30px; border-radius: 15px; 
+            background: #ffffff; transition: 0.4s; cursor: pointer;
+        }
+        .feature:hover { background: #2c3e50; color: #ffffff; transform: translateY(-10px); }
+        .feature:hover h3 { color: #ffffff; }
+
+        /* STATS */
+        .stats { background: #2c3e50; color: #ffffff; display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; padding: 60px 8%; }
+        .stats h2 { font-size: 45px; color: #ffffff; }
+
+        /* PROFILE */
+        .profile { display: grid; grid-template-columns: 300px 1fr; gap: 40px; align-items: center; }
+        .profile img { width: 220px; height: 220px; border-radius: 50%; border: 5px solid #2c3e50; }
+        .quote { border: 2px solid #2c3e50; padding: 20px; margin-top: 20px; font-style: italic; border-radius: 10px; }
+        .social { display: flex; gap: 15px; margin-top: 25px; }
+        .social a { 
+            width: 40px; height: 40px; border-radius: 50%; background: #2c3e50; color: #ffffff; 
+            display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px;
+            transition: 0.3s;
+        }
+        .social a:hover { background: #ffffff; color: #2c3e50; border: 1px solid #2c3e50; }
+
+        /* CTA */
+        .cta { background: #2c3e50; color: #ffffff; text-align: center; padding: 80px 8%; }
+        .cta h2 { font-size: 40px; margin-bottom: 15px; }
+
+        /* FOOTER */
+        footer { background: #ffffff; border-top: 3px solid #2c3e50; color: #2c3e50; text-align: center; padding: 30px; }
+
+        /* RESPONSIVE */
+        @media(max-width:900px) {
+            nav { display: none; }
+            .hero h1 { font-size: 40px; }
+            .about, .profile { grid-template-columns: 1fr; }
+            .profile { text-align: center; }
+            .profile img { margin: auto; }
+            .stats { grid-template-columns: 1fr 1fr; gap: 20px; }
+            .hero-logo{
+                margin-top: 100px;
+                margin-bottom: -10px;
+            }
+            .btn{
+                margin-top: -10px;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <a href="#" class="logo">Kas<span>Keuangan</span></a>
+        <nav>
+            <a href="#tentang">Tentang</a>
+            <a href="#fitur">Fitur</a>
+            <a href="https://kaskeuangan.wuaze.com/">Login</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <img src="KasKeuanganKhresmupu.png" class="hero-logo" alt="Logo">
+            <h1>KasKeuangan Khresmupu</h1>
+            <p>Platform manajemen finansial digital yang membantu pengguna mencatat transaksi, mengatur anggaran, dan menjaga kestabilan keuangan.</p>
+            <a class="btn" href="https://kaskeuangan.wuaze.com/">Masuk Website</a>
+        </div>
+    </section>
+
+    <section id="tentang">
+        <h1 class="title">Tentang Website</h1>
+        <p class="subtitle">Sistem pengelolaan keuangan digital yang sederhana, terstruktur, dan mudah digunakan.</p>
+        <div class="about">
+            <div class="card">
+                <h2>Visi</h2>
+                <p>KasKeuangan Khresmupu hadir sebagai platform digital untuk membantu pengguna memahami, mencatat, dan mengontrol kondisi finansial.</p>
+                <p>Website ini dirancang untuk kebutuhan pribadi, mahasiswa, maupun organisasi.</p>
+            </div>
+            <div class="card logo-box">
+                <h2>Filosofi Logo</h2>
+                <img src="KasKeuanganKhresmupu.png" alt="Logo">
+                <p>Melambangkan keteraturan, kedisiplinan, dan keseimbangan arus kas antara pemasukan dan pengeluaran.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="fitur">
+        <h1 class="title">Fitur Unggulan</h1>
+        <p class="subtitle">Membantu pengguna mengelola keuangan dalam satu platform.</p>
+        <div class="features">
+            <div class="feature"><h3>💰 Transaksi</h3><p>Mencatat pemasukan dan pengeluaran secara rinci.</p></div>
+            <div class="feature"><h3>🎯 Target Pengeluaran</h3><p>Mengatur batas pengeluaran agar tetap terkendali.</p></div>
+            <div class="feature"><h3>📄 Tagihan</h3><p>Mengelola daftar pembayaran dan kewajiban.</p></div>
+            <div class="feature"><h3>🏦 Multi Dompet</h3><p>Mengatur berbagai rekening dan sumber dana.</p></div>
+            <div class="feature"><h3>📊 Dashboard</h3><p>Melihat kondisi keuangan melalui statistik.</p></div>
+            <div class="feature"><h3>📁 Export Data</h3><p>Menyimpan laporan keuangan dengan format pdf dan xls.</p></div>
+        </div>
+    </section>
+
+
+    <section class="cta">
+        <h2>Kelola Keuangan Lebih Teratur</h2>
+        <p>Gunakan KasKeuangan Khresmupu sekarang.</p>
+        <a href="https://kaskeuangan.wuaze.com/" class="btn">Login Sekarang</a>
+    </section>
+
+</body>
+</html>

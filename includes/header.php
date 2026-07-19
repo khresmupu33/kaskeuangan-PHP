@@ -653,6 +653,41 @@
             padding: 10px 16px;
         }
     }
+/* Styling Khusus untuk Card Saldo Bersih */
+.saldo-card {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: #ffffff;
+    padding: 25px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.saldo-card h3 {
+    color: #fff;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.saldo-card .nominal {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Sedikit hiasan dekoratif di pojok kanan */
+.saldo-card::after {
+    content: "💳";
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 3rem;
+    opacity: 0.1;
+}
 </style>
 </head>
 
