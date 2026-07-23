@@ -4,21 +4,29 @@ session_start();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     
     // Cek apakah username sudah ada
-    $check = mysqli_query($conn, "SELECT id FROM users WHERE username = '$username'");
+    $check_user = mysqli_query($conn, "SELECT id FROM users WHERE username = '$username'");
+    // Cek apakah email sudah ada
+    $check_email = mysqli_query($conn, "SELECT id FROM users WHERE email = '$email'");
     
-    if (mysqli_num_rows($check) == 0) {
-        // Simpan user baru
-        mysqli_query($conn, "INSERT INTO users (username) VALUES ('$username')");
+    if (mysqli_num_rows($check_user) > 0) {
+        $error = "Username sudah terdaftar. Silakan pilih yang lain.";
+    } elseif (mysqli_num_rows($check_email) > 0) {
+        $error = "Email sudah terdaftar. Gunakan email lain atau lakukan pemulihan password.";
+    } else {
+        // Simpan user baru beserta email dan password_hash
+        // (Pastikan kolom 'email' dan 'password_hash' sudah ada di tabel users Anda)
+        mysqli_query($conn, "INSERT INTO users (username, email, password_hash) VALUES ('$username', '$email', '$password')");
+        
         $_SESSION['user_id'] = mysqli_insert_id($conn);
         $_SESSION['username'] = $username;
         
         // Arahkan paksa ke setup awal
         header("Location: setup_awal.php");
         exit();
-    } else {
-        $error = "Username sudah terdaftar. Silakan pilih yang lain.";
     }
 }
 ?>
@@ -60,7 +68,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         color: #2c3e50;
     }
 
-    .register-card input[type="text"] {
+    .register-card input[type="text"],
+    .register-card input[type="email"],
+    .register-card input[type="password"] {
         width: 100%;
         padding: 10px 12px;
         border: 1px solid #ccc;
@@ -72,7 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .register-card button {
         width: 100%;
         padding: 11px;
-        background: #27ae60;
+        background: #2c3e50;
         color: white;
         border: none;
         border-radius: 6px;
@@ -90,7 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         margin-bottom: 15px;
     }
 
-    /* Overlay & Lingkaran Loading Spinner (Benar-benar di paling depan) */
+    /* Overlay & Lingkaran Loading Spinner */
     #page-loader {
         position: fixed;
         top: 0;
@@ -146,6 +156,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="form-group">
                 <input type="text" name="username" placeholder="Buat Username Baru" required autocomplete="off">
             </div>
+            <div class="form-group">
+                <input type="email" name="email" placeholder="Masukkan Email Aktif" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Buat Password" required>
+            </div>
             <button type="submit">Daftar & Setup Akun</button>
         </form>
         <p style="margin-top: 15px; text-align: center; font-size: 14px;">
@@ -153,7 +169,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </p>
     </div>
     <script>
-    // Hilangkan loader dan jalankan fade-in saat halaman selesai dimuat
     window.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('page-loader');
         document.body.classList.add('fade-in');
@@ -162,11 +177,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }, 50);
     });
 
-    // Tampilkan loader dan jalankan fade-out saat pindah halaman
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a');
-        if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute(
-                'onclick')) {
+        if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute('onclick')) {
             const targetUrl = link.href;
             if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
                 e.preventDefault();

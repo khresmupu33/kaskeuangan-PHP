@@ -1,3 +1,23 @@
+<?php
+// Pastikan session sudah aktif sebelum mengakses $_SESSION
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$pending_otp_count = 0;
+
+// Cek apakah user yang login memiliki user_id = 1
+if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == 1) {
+    // Ambil koneksi database jika belum ada
+    if (isset($conn)) {
+        $q_pending = mysqli_query($conn, "SELECT COUNT(*) as total FROM otp_verification WHERE status = 'pending'");
+        if ($q_pending) {
+            $data_pending = mysqli_fetch_assoc($q_pending);
+            $pending_otp_count = $data_pending['total'];
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 
@@ -141,12 +161,26 @@
         cursor: pointer;
         font-family: inherit;
         font-size: 14px;
+        position: relative;
     }
 
     header nav ul li a:hover,
     header nav ul li .drop-btn:hover {
         background: rgba(255, 255, 255, 0.12);
         color: #fff;
+    }
+
+    /* Badge Notifikasi Pending OTP */
+    .badge-pending {
+        background-color: #e74c3c;
+        color: white;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: bold;
+        margin-left: 5px;
+        display: inline-block;
+        vertical-align: middle;
     }
 
     .mobile-icon {
@@ -498,8 +532,8 @@
     }
 
     /* =========================================
-       MEDIA QUERY & BOTTOM TAB BAR UNTUK HP (<= 768px)
-       ========================================= */
+        MEDIA QUERY & BOTTOM TAB BAR UNTUK HP (<= 768px)
+        ========================================= */
     @media screen and (max-width: 768px) {
         body {
             padding-top: 75px;
@@ -653,42 +687,42 @@
             padding: 10px 16px;
         }
     }
-/* Styling Khusus untuk Card Saldo Bersih */
-.saldo-card {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    color: #ffffff;
-    padding: 25px;
-    border-radius: 16px;
-    margin-bottom: 25px;
-    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.2);
-    position: relative;
-    overflow: hidden;
-}
 
-.saldo-card h3 {
-    color: #fff;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-}
+    /* Styling Khusus untuk Card Saldo Bersih */
+    .saldo-card {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: #ffffff;
+        padding: 25px;
+        border-radius: 16px;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 25px rgba(44, 62, 80, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
 
-.saldo-card .nominal {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0;
-}
+    .saldo-card h3 {
+        color: #fff;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+    }
 
-/* Sedikit hiasan dekoratif di pojok kanan */
-.saldo-card::after {
-    content: "💳";
-    position: absolute;
-    right: 20px;
-    top: 20px;
-    font-size: 3rem;
-    opacity: 0.1;
-}
-</style>
+    .saldo-card .nominal {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .saldo-card::after {
+        content: "💳";
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        font-size: 3rem;
+        opacity: 0.1;
+    }
+    </style>
 </head>
 
 <body>
@@ -704,6 +738,17 @@
                         alt="Logo Kas Keuangan Khresmupu">
                     <span>KasKeuangan Khresmupu</span>
                 </a>
+                   <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == 1): ?>
+                    <div class="dropdown" id="dropdown-otp">
+                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-otp')">
+
+                            <span>Notif OTP <?php if($pending_otp_count > 0): ?><span class="badge-pending"><?php echo $pending_otp_count; ?></span><?php endif; ?></span>
+                        </button>
+                        <ul class="dropdown-content" style="min-width: 260px;">
+                            <li><a href="<?php echo $base_url; ?>../otplist.php" style="font-weight: bold; background: rgba(255,255,255,0.05);">Kelola Semua Pending (<?php echo $pending_otp_count; ?>)</a></li>   
+                        </ul>
+                    </div>
+                    <?php endif; ?>
 
                 <ul id="nav-menu">
                     <li>
@@ -736,16 +781,11 @@
                         </ul>
                     </li>
 
-                    <li class="dropdown" id="dropdown-pengaturan">
-                        <button class="drop-btn" onclick="toggleDropdown(event, 'dropdown-pengaturan')">
-                            <span class="mobile-icon">⚙️</span>
-                            <span>Atur ▾</span>
-                        </button>
-                        <ul class="dropdown-content">
-                            <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_kategori.php">Kategori</a></li>
-                            <li><a href="<?php echo $base_url; ?>pages/transaksi/tambah_akun.php">Dompet / Rekening</a>
-                            </li>
-                        </ul>
+                    <li>
+                        <a href="<?php echo $base_url; ?>pages/transaksi/profil.php">
+                            <span class="mobile-icon">👤</span>
+                            <span>Profil</span>
+                        </a>
                     </li>
 
                     <li>
@@ -771,17 +811,13 @@
     window.addEventListener('pageshow', (event) => {
         const loader = document.getElementById('page-loader');
 
-        // event.persisted bernilai true jika halaman dimuat dari cache (tombol Back/Forward)
-        // performance.navigation.type === 1 mendeteksi tombol Refresh
         const isRefresh = performance.getEntriesByType("navigation")[0]?.type === "reload";
 
         if (event.persisted || isRefresh) {
-            // Jika dari Refresh atau Back/Forward: Matikan animasi/loader langsung tanpa jeda
             if (loader) loader.classList.remove('show');
             document.body.classList.add('fade-in');
             document.body.classList.remove('fade-out');
         } else {
-            // Jika benar-benar navigasi baru dari halaman lain: Jalankan animasi masuk
             document.body.classList.add('fade-in');
             setTimeout(() => {
                 if (loader) loader.classList.remove('show');
@@ -796,7 +832,6 @@
                 'onclick')) {
             const targetUrl = link.href;
 
-            // Abaikan link modifier (seperti Ctrl+Klik untuk buka tab baru)
             if (e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) return;
 
             if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
@@ -808,7 +843,7 @@
 
                 setTimeout(() => {
                     window.location.href = targetUrl;
-                }, 400); // Cocokkan durasi dengan transition CSS
+                }, 400);
             }
         }
     });

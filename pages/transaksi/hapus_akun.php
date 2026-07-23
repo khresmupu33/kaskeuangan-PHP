@@ -10,6 +10,6 @@ if (isset($_GET['id']) && isset($_SESSION['user_id'])) {
     mysqli_query($conn, "DELETE FROM akun_pembayaran WHERE id = $id AND user_id = $user_id");
 }
 
-header("Location: tambah_akun.php");
+header("Location: profil.php");
 exit();
 ?>

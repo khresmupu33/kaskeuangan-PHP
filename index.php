@@ -4,13 +4,21 @@ session_start();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
+    $password = $_POST['password'];
+
     $query = mysqli_query($conn, "SELECT * FROM users WHERE username = '$username'");
     
     if (mysqli_num_rows($query) > 0) {
         $user = mysqli_fetch_assoc($query);
-        $_SESSION['user_id'] = $user['id'];
-        header("Location: pages/dashboard.php");
-        exit;
+        
+        // Verifikasi password dengan password_hash di database
+        if (password_verify($password, $user['password_hash'])) {
+            $_SESSION['user_id'] = $user['id'];
+            header("Location: pages/dashboard.php");
+            exit;
+        } else {
+            $error = "Password salah!";
+        }
     } else {
         $error = "Username tidak terdaftar!";
     }
@@ -53,7 +61,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         align-items: center;
     }
 
-    /* Desain disamakan dengan .nav-brand dari navbar */
     .login-brand-header {
         display: flex;
         align-items: center;
@@ -65,7 +72,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         margin-bottom: 20px;
     }
 
-    /* Desain logo bulat disamakan dengan .nav-brand img */
     .login-brand-header img {
         width: 100px;
         height: 100px;
@@ -90,7 +96,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         font-size: 22px;
     }
 
-    .login-card input[type="text"] {
+    .login-card input[type="text"],
+    .login-card input[type="password"] {
         width: 100%;
         padding: 10px 12px;
         border: 1px solid #ccc;
@@ -122,7 +129,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         text-align: left;
     }
 
-    /* Overlay & Lingkaran Loading Spinner (Benar-benar di paling depan) */
     #page-loader {
         position: fixed;
         top: 0;
@@ -130,24 +136,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         width: 100vw;
         height: 100vh;
         background: #f4f7f6;
-        /* Warna latar belakang loading */
         display: flex;
         justify-content: center;
         align-items: center;
         z-index: 2147483647;
-        /* Nilai z-index maksimal agar tidak tertutup apa pun */
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.4s ease-in-out;
     }
 
-    /* Saat aktif, layar tertutup penuh oleh loader */
     #page-loader.show {
         opacity: 1;
         pointer-events: auto;
     }
 
-    /* Desain Lingkaran Spinner #2c3e50 */
     .spinner {
         width: 50px;
         height: 50px;
@@ -163,7 +165,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         0% {
             transform: rotate(0deg);
         }
-
         100% {
             transform: rotate(360deg);
         }
@@ -176,7 +177,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="spinner"></div>
     </div>
     <div class="outer-container">
-        <!-- Logo dan teks di luar kotak login, desainnya disamakan dengan navbar -->
         <a href="index.php" class="login-brand-header">
             <img src="includes/KasKeuanganKhresmupu.png" alt="Logo Kas Keuangan Khresmupu">
         </a>
@@ -188,16 +188,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="form-group">
                     <input type="text" name="username" placeholder="Username" required autocomplete="off">
                 </div>
+                <div class="form-group">
+                    <input type="password" name="password" placeholder="Password" required>
+                </div>
                 <button type="submit" style="background-color:#2c3e50;">Masuk</button>
             </form>
             <p style="margin-top: 15px; text-align: center; font-size: 14px; color: #555;">
                 Belum punya akun? <a href="register.php"
                     style="color: #3498db; text-decoration: none; font-weight: bold;">Daftar</a>
             </p>
+            <p style="margin-top: 10px; text-align: right; font-size: 13px;">
+                <a href="forgot_password.php" style="color: #e74c3c; text-decoration: none;">Lupa password?</a>
+            </p>
         </div>
     </div>
     <script>
-    // Hilangkan loader dan jalankan fade-in saat halaman selesai dimuat
     window.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('page-loader');
         document.body.classList.add('fade-in');
@@ -206,11 +211,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }, 50);
     });
 
-    // Tampilkan loader dan jalankan fade-out saat pindah halaman
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a');
-        if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute(
-                'onclick')) {
+        if (link && link.href && !link.href.startsWith('#') && link.target !== '_blank' && !link.hasAttribute('onclick')) {
             const targetUrl = link.href;
             if (targetUrl.includes(window.location.hostname) || targetUrl.startsWith('/')) {
                 e.preventDefault();

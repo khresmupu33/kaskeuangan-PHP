@@ -19,38 +19,65 @@ include '../includes/header.php';
     <div class="info-card">
         <h4><?php echo htmlspecialchars($akun['nama_akun']); ?></h4>
         <p>Saldo: <strong>Rp <?php echo number_format($akun['saldo_akhir'], 0, ',', '.'); ?></strong></p>
-        <p class="small-text">Saldo awal: Rp
-            <?php echo number_format($saldo_awal_map[$akun['id']] ?? 0, 0, ',', '.'); ?></p>
+    
     </div>
     <?php endforeach; ?>
 </div>
+
 <h2>Tagihan & Hutang Aktif</h2>
 <div class="target-wrapper">
     <?php if (count($tagihan_aktif) > 0): ?>
-    <?php foreach ($tagihan_aktif as $tag): ?>
-    <div class="target-card normal" style="border-left: 4px solid #e74c3c;">
-        <h4><?php echo htmlspecialchars($tag['nama_tagihan']); ?></h4>
-        <p class="small-text">Jenis: <strong><?php echo htmlspecialchars($tag['jenis']); ?></strong></p>
-        <p><strong>Total:</strong> Rp <?php echo number_format($tag['total_nominal'], 0, ',', '.'); ?></p>
-        <p><strong>Sisa Tagihan:</strong> Rp <?php echo number_format($tag['sisa_nominal'], 0, ',', '.'); ?></p>
-        <p class="small-text">Jatuh Tempo: <strong><?php echo htmlspecialchars($tag['tenggat_waktu']); ?></strong></p>
+    <?php foreach ($tagihan_aktif as $tag): 
+        // 1. Logika pengecekan jatuh tempo (bandingkan tenggat waktu dengan hari ini)
+        $tanggal_hari_ini = date('Y-m-d');
+        $tenggat_waktu = $tag['tenggat_waktu'];
+        
+        // Status over bernilai true jika tanggal hari ini > tenggat waktu
+        $is_overdue = (!empty($tenggat_waktu) && $tenggat_waktu < $tanggal_hari_ini);
+    ?>
+    
+    <!-- 2. Dinamis class card menggunakan 'over' jika sudah jatuh tempo -->
+    <div class="target-card <?php echo $is_overdue ? 'over' : 'normal'; ?>" style="border-left: 4px solid <?php echo $is_overdue ? '#c0392b' : '#e74c3c'; ?>; <?php echo $is_overdue ? 'background-color: #fadbd8;' : ''; ?>">
+        
+        <h4 <?php echo $is_overdue ? 'style="color: #900c3f;"' : ''; ?>><?php echo htmlspecialchars($tag['nama_tagihan']); ?></h4>
+        
+        <p class="small-text" <?php echo $is_overdue ? 'style="color: black;"' : ''; ?>>
+            Jenis: <strong><?php echo htmlspecialchars($tag['jenis']); ?></strong>
+        </p>
+        
+        <p <?php echo $is_overdue ? 'style="color: black;"' : ''; ?>>
+            <strong>Total:</strong> Rp <?php echo number_format($tag['total_nominal'], 0, ',', '.'); ?>
+        </p>
+        
+        <p <?php echo $is_overdue ? 'style="color: black;"' : ''; ?>>
+            <strong>Sisa Tagihan:</strong> Rp <?php echo number_format($tag['sisa_nominal'], 0, ',', '.'); ?>
+        </p>
 
         <?php if (!empty($tag['tempat_bayar'])): ?>
-        <p class="small-text" style="margin-top: 8px;">
+        <p class="small-text" style="margin-top: 8px; <?php echo $is_overdue ? 'color: black;' : ''; ?>">
             Tempat Bayar:
-            <?php 
-                            $tempat = $tag['tempat_bayar'];
-                            // Cek apakah nilai tempat_bayar berupa URL/Link (http/https/www)
-                            if (filter_var($tempat, FILTER_VALIDATE_URL) || preg_match('/^(http:\/\/|https:\/\/|www\.)/i', $tempat)) {
-                                $url_link = preg_match('/^www\./i', $tempat) ? 'https://' . $tempat : $tempat;
-                                echo '<a href="' . htmlspecialchars($url_link, ENT_QUOTES) . '" target="_blank" style="color: #3498db; text-decoration: underline; font-weight: bold;">' . htmlspecialchars($tag['tempat_bayar']) . '</a>';
-                            } else {
-                                // Jika bukan link, tampilkan sebagai teks biasa
-                                echo '<strong>' . htmlspecialchars($tempat) . '</strong>';
-                            }
-                        ?>
+            <?php  
+                $tempat = $tag['tempat_bayar'];
+                if (filter_var($tempat, FILTER_VALIDATE_URL) || preg_match('/^(http:\/\/|https:\/\/|www\.)/i', $tempat)) {
+                    $url_link = preg_match('/^www\./i', $tempat) ? 'https://' . $tempat : $tempat;
+                    echo '<a href="' . htmlspecialchars($url_link, ENT_QUOTES) . '" target="_blank" style="color: #3498db; text-decoration: underline; font-weight: bold;">' . htmlspecialchars($tag['tempat_bayar']) . '</a>';
+                } else {
+                    echo '<strong>' . htmlspecialchars($tempat) . '</strong>';
+                }
+            ?>
         </p>
         <?php endif; ?>
+
+        <!-- 3. Munculkan teks peringatan jika sudah melewati jatuh tempo -->
+        <?php if ($is_overdue): ?>
+        <p class="warning-text" style="color: #900c3f; font-weight: bold; margin-top: 8px;">
+            WARNING: Tagihan sudah melewati batas jatuh tempo!
+        </p>
+        <?php endif; ?>
+
+        <p class="small-text" style="margin-top: 8px; <?php echo $is_overdue ? 'style="color: black;"' : ''; ?>">
+            Jatuh Tempo: <strong style="<?php echo $is_overdue ? 'color: #900c3f;' : ''; ?>"><?php echo htmlspecialchars($tag['tenggat_waktu']); ?></strong>
+        </p>
 
         <button
             onclick="bukaModalPelunasanDash(<?php echo (int)$tag['id']; ?>, '<?php echo htmlspecialchars($tag['nama_tagihan'], ENT_QUOTES); ?>', <?php echo (float)$tag['sisa_nominal']; ?>)"
@@ -64,7 +91,8 @@ include '../includes/header.php';
     </div>
     <?php endif; ?>
 </div>
-<h2>Target Anda</h2>
+
+<h2>Target Pengeluaran</h2>
 <div class="target-wrapper">
     <?php if (count($targets) > 0): ?>
     <?php foreach ($targets as $target): ?>
